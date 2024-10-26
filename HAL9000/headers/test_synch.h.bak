@@ -1,8 +1,0 @@
-#pragma once
-
-#include "synch.h"
-
-BOOLEAN
-TestSynchPrimitives(
-    void
-    );
