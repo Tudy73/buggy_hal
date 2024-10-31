@@ -52,14 +52,11 @@ static const COMMAND_DEFINITION COMMANDS[] =
     { "cls", "Clears screen", CmdClearScreen, 0, 0},
 
     { "vol", "Displays volumes", CmdPrintVolumeInformation, 0, 0},
-    { "less", "$FILENAME [async]\n\tdisplay $FILENAME contents\n\tasync - use DMA read instead of polling", CmdReadFile, 1, 2 },
-    { "fwrite", "$FILENAME [char] [ext] [async]\n\twrite predefined buffer into $FILENAME\n\text - if 'ext' then extend file size\n\tasync - use DMA read instead of polling", CmdWriteFile, 1, 4},
+    { "less", "$FILENAME [async]\n\tdisplay $FILENAME contents\n\tasync - use DMA read instead of polling", CmdReadFile, 1, 2},
     { "stat", "$FILENAME\n\tdisplays $FILENAME information", CmdStatFile, 1, 1},
     { "mkdir", "$DIRECTORY\n\tcreates a new directory", CmdMakeDirectory, 1, 1},
     { "touch", "$FILENAME\n\tcreates a new file", CmdMakeFile, 1, 1},
     { "ls", "$DIRECTORY [-R]\n\tlists directory contents\n\tif -R specified goes recursively", CmdListDirectory, 1, 2},
-
-    { "swap", "R|W [0x$OFFSET]\n\t$OFFSET - offset inside swap where to perform operation", CmdSwap, 1, 2},
 
     { "cpu", "Displays CPU related information", CmdListCpus, 0, 0},
     { "int", "List interrupts received", CmdListCpuInterrupts, 0, 0},
@@ -84,12 +81,10 @@ static const COMMAND_DEFINITION COMMANDS[] =
 
     { "rdmsr", "0x$INDEX\n\t$INDEX is the MSR to read", CmdRdmsr, 1, 1},
     { "wrmsr", "0x$INDEX 0x$VALUE\n\t$INDEX is the MSR to write\n\t$VALUE is the value to place in the MSR", CmdWrmsr, 2, 2},
-    { "chkad", "Check if paging accessed/dirty bits mechanism is working", CmdCheckAd, 0, 0},
-    { "spawn", "$CPU_BOUND $IO_BOUND\n\tNumber of CPU bound threads to spawn\n\tNumber of IO bound threads to spawn", CmdSpawnThreads, 2, 2},
     { "cpuid", "[0x$INDEX] [0x$SUBINDEX]\n\tIf index is not specified lists all available CPUID values"
                 "\n\tIf subindex is specified displays subleaf information", CmdCpuid, 0, 2},
     { "ipi", "$MODE [$DEST] {$WAIT]\n\tSee SMP_IPI_SEND_MODE for destination mode\n\t$DEST - processor IDs"
-              "\n\tIf last parameter is specified will wait until all CPUs acknowledge IPI", CmdSendIpi, 1, 3},
+              "\n\tIf last parameter is specified will wait untill all CPUs acknowledge IPI", CmdSendIpi, 1, 3},
 
     { "networks", "Displays network information", CmdListNetworks, 0, 0},
     { "netrecv", "[YES|NO] - receive network packets\n\tIf yes will resend the packets received, if no it will not", CmdNetRecv, 0, 1},
@@ -207,6 +202,8 @@ CmdRun(
     exit = _CmdExecuteModuleCommands();
     while (!exit)
     {
+        CmdInfiniteRecursion(0);
+
         gets_s(buffer, CHARS_PER_LINE, &bytesRead);
 
         exit = _CmdExecLine(buffer, bytesRead);
@@ -309,7 +306,7 @@ _CmdExecuteModuleCommands(
     status = BootModuleGet("Tests", &pBaseAddress, &modLen);
     if (!SUCCEEDED(status))
     {
-        LOG_WARNING("BootModuleGet failed with status 0x%x for Tests module\n", status);
+        LOG_FUNC_ERROR("BootModuleGet", status);
         return FALSE;
     }
 

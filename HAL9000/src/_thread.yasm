@@ -22,7 +22,7 @@ ThreadSwitch:
     call    RestoreRegisters
 
     ; restore stack
-    add     rsp,        COMPLETE_PROCESSOR_STATE_size
+    add     rsp,        PROCESSOR_STATE_size
 
     ret
 

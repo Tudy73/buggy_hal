@@ -17,8 +17,8 @@
 #define        ATTR_LONG_NAME_MASK          (ATTR_READ_ONLY|ATTR_HIDDEN|ATTR_SYSTEM|ATTR_VOLUME_ID|ATTR_DIRECTORY|ATTR_ARCHIVE)
 
 // Short Directory entry name length
-#define        SHORT_NAME_NAME              8
-#define        SHORT_NAME_EXT               3
+#define     SHORT_NAME_NAME                 8
+#define     SHORT_NAME_EXT                  3
 #define        SHORT_NAME_CHARS             11
 
 // Long Directory Entries char lengths
@@ -27,8 +27,6 @@
 #define        LONG_NAME3_CHARS             2
 #define        LONG_NAME_TOTAL_CHARS        (LONG_NAME1_CHARS+LONG_NAME2_CHARS+LONG_NAME3_CHARS)
 
-#define        LONG_NAME_MAX_CHARS          255
-
 #define        MAX_SECTORS_FOR_LONG_ENTRY    3
 
 // Values in DIR_Name[0] to check to see if entry
@@ -36,8 +34,6 @@
 #define        FREE_ENTRY                   0xE5
 #define        FREE_ALL                     0x00
 #define        FREE_JAP_ENTRY               0x05
-
-#define        LONG_NAME_ORD_END_MASK       0x40
 
 // FAT Date format values
 #define        FAT_DAY_BITS                 5
@@ -90,17 +86,11 @@
 // Bad cluster value
 #define        FAT32_BAD_CLUSTER            0x0FFFFFF7
 
-// Checks if cluster number marks the end of the cluster chain
-#define        FAT32_EOC(cluster)           ((cluster) > FAT32_BAD_CLUSTER)
-
-#define        FAT32_UNKNOWN                0xFFFFFFFF
 
 // Maximum number of clusters per FAT type
 #define        FAT12_MAX_CLUSTERS           4085
 #define        FAT16_MAX_CLUSTERS           65525
 
-//typedef     WORD    FAT16_ENTRY;
-typedef     DWORD   FAT32_ENTRY;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////                                    STRUCTURES                                 /////////
@@ -109,8 +99,6 @@ typedef     DWORD   FAT32_ENTRY;
 
 // Directory entry structure
 #pragma pack(push,1)
-
-#pragma warning(push)
 
 //warning C4214: nonstandard extension used: bit field types other than int
 #pragma warning(disable:4214)
@@ -134,7 +122,7 @@ typedef struct _FATTIME
     WORD        Hour    : 5;
 } FATTIME, *PFATTIME;
 STATIC_ASSERT(sizeof(FATTIME) == sizeof(WORD));
-#pragma warning(pop)
+#pragma warning(default:4214)
 
 typedef struct _DIR_ENTRY
 {
@@ -188,7 +176,6 @@ typedef struct _LONG_DIR_ENTRY
     BYTE            LDIR_Name3[4];
 } LONG_DIR_ENTRY, *PLONG_DIR_ENTRY;
 
-// Found in sector 1 of the partition
 typedef struct _FSINFO
 {
     DWORD           FSI_LeadSig;
@@ -200,7 +187,6 @@ typedef struct _FSINFO
     DWORD           FSI_TrailSig;
 } FSINFO, *PFSINFO;
 
-// Found in sector 0 of the partition
 typedef struct _FAT_BPB
 {
     BYTE            BS_jmpBoot[3];      // jump instruction

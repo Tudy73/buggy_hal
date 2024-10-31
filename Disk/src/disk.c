@@ -11,12 +11,14 @@ _DiskInitialize(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _DiskRetrievePartitionsFromDisk(
     INOUT   PDEVICE_OBJECT          DiskDevice
     );
 
 static
+SAL_SUCCESS
 STATUS
 _DiskRetrievePartitionsFromDiskStartingAtOffset(
     INOUT   PDEVICE_OBJECT              DiskDevice,
@@ -27,6 +29,7 @@ _DiskRetrievePartitionsFromDiskStartingAtOffset(
     OUT_OPT PDISK_LAYOUT_INFORMATION    DiskLayoutInformation
     );
 
+SAL_SUCCESS
 STATUS
 (__cdecl DiskDriverEntry)(
     INOUT       PDRIVER_OBJECT      DriverObject
@@ -57,12 +60,9 @@ STATUS
         LOG_FUNC_ERROR("IoGetDeviceByType", status);
         return status;
     }
-    ASSERT(numberOfDevices == 0 || pHardDiskControllerDevices != NULL);
 
     for (i = 0; i < numberOfDevices; ++i)
     {
-        ASSERT(pHardDiskControllerDevices[i] != NULL);
-
         status = _DiskInitialize(DriverObject,
                                  pHardDiskControllerDevices[i]
                                  );
@@ -190,6 +190,7 @@ _DiskInitialize(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _DiskRead(
     IN                                          PDEVICE_OBJECT  DiskDevice,
@@ -266,6 +267,7 @@ _DiskRead(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _DiskRetrievePartitionsFromDisk(
     INOUT   PDEVICE_OBJECT          DiskDevice
@@ -329,6 +331,7 @@ _DiskRetrievePartitionsFromDisk(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _DiskRetrievePartitionsFromDiskStartingAtOffset(
     INOUT   PDEVICE_OBJECT              DiskDevice,

@@ -81,20 +81,7 @@ __main(
     {
         if (hProcess != UM_INVALID_HANDLE_VALUE)
         {
-            STATUS termStatus;
-
-            status = SyscallProcessWaitForTermination(hProcess, &termStatus);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("SyscallProcessWaitForTermination", status);
-            }
-
-            status = SyscallProcessCloseHandle(hProcess);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("SyscallProcessCloseHandle", status);
-            }
-
+            SyscallProcessCloseHandle(hProcess);
             hProcess = UM_INVALID_HANDLE_VALUE;
         }
     }

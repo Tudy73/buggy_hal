@@ -187,12 +187,6 @@ ProcessExecuteForEachProcessEntry(
     return status;
 }
 
-//  warning C26130: Missing annotation _Requires_lock_held_(Process->PagingData->Lock) or _No_competing_thread_ at function 'ProcessActivatePagingTables'.
-// Otherwise it could be a race condition. Variable 'Process->PagingData->Data' should be protected by lock 'Process->PagingData->Lock'.
-// I do remember having a look at this function a lot of times, it's OK (I don't remember what the problem is though :( )
-#pragma warning(push)
-#pragma warning(disable:26130)
-
 void
 ProcessActivatePagingTables(
     IN      PPROCESS            Process,
@@ -207,7 +201,6 @@ ProcessActivatePagingTables(
                  (PCID)Process->Id,
                  InvalidateAddressSpace);
 }
-#pragma warning(pop)
 
 STATUS
 ProcessCreate(
@@ -257,7 +250,7 @@ ProcessCreate(
         status = UmApplicationRetrieveHeader(PathToExe, pProcess->HeaderInfo);
         if (!SUCCEEDED(status))
         {
-            LOG_TRACE_USERMODE("[ERROR]UmApplicationRetrieveHeader failed with status 0x%x\n", status);
+            LOG_FUNC_ERROR("UmApplicationRetrieveHeader", status);
             __leave;
         }
         LOG_TRACE_PROCESS("Successfully retrieved process NT header!\n");
@@ -367,11 +360,6 @@ ProcessTerminate(
     PTHREAD pCurrentThread;
     BOOLEAN bFoundCurThreadInProcess;
     INTR_STATE oldState;
-
-    if (NULL == Process)
-    {
-        Process = GetCurrentProcess();
-    }
 
     ASSERT(Process != NULL);
     ASSERT(!ProcessIsSystem(Process));
@@ -711,7 +699,7 @@ _ProcessDestroy(
     IN_OPT  PVOID                   Context
     )
 {
-    PPROCESS Process = (PPROCESS) CONTAINING_RECORD(Object, PROCESS, RefCnt);
+    PPROCESS Process = (PPROCESS) Object;
 
     ASSERT(NULL != Process);
     ASSERT(!ProcessIsSystem(Process));

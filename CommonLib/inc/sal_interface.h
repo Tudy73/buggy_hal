@@ -1,17 +1,14 @@
 #pragma once
 
-C_HEADER_START
 #include <sal.h>
 
+#define SAL_SUCCESS                                 _Success_(SUCCEEDED(return))
 #define PTR_SUCCESS                                 _Success_(NULL != return)
 #define SIZE_SUCCESS                                _Success_(MAX_DWORD != return)
 #define BOOL_SUCCESS                                _Success_(TRUE == return)
 
 // The IN arguments must always be constants :)
-#ifndef IN
 #define IN                                          _In_ const
-#endif // IN
-
 #define IN_Z                                        _In_z_ const
 #define IN_OPT                                      _In_opt_ const
 #define IN_OPT_Z                                    _In_opt_z_ const
@@ -30,10 +27,7 @@ C_HEADER_START
 #define INOUT_UPDATES_TO(x,y)                       _Inout_updates_to_((x),(y))
 #define INOUT_UPDATES_ALL(x)                        _Inout_updates_all_((x))
 
-#ifndef OUT
 #define OUT                                         _Out_
-#endif // OUT
-
 #define OUT_Z                                       __out_z
 #define OUT_PTR                                     _Outptr_
 #define OUT_PTR_MAYBE_NULL                          _Outptr_result_maybenull_
@@ -71,4 +65,3 @@ C_HEADER_START
 #define RET_NOT_NULL                                _Ret_notnull_
 
 #include "sal_intrinsic.h"
-C_HEADER_END

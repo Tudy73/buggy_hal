@@ -26,6 +26,11 @@ IoDeleteDevice(
     INOUT   PDEVICE_OBJECT      Device
     );
 
+void
+IoRegisterFileSystem(
+    IN      PDEVICE_OBJECT      FileSystemDevice
+    );
+
 PTR_SUCCESS
 PDRIVER_OBJECT
 IoCreateDriver(
@@ -38,7 +43,7 @@ IoGetDriverExtension(
     IN          PDEVICE_OBJECT  Device
     );
 
-void
+void 
 IoAttachDevice(
     INOUT   PDEVICE_OBJECT  SourceDevice,
     IN      PDEVICE_OBJECT  TargetDevice
@@ -72,6 +77,7 @@ IoCopyCurrentStackLocationToNext(
     INOUT   PIRP            Irp
     );
 
+SAL_SUCCESS
 STATUS
 IoCallDriver(
     IN      PDEVICE_OBJECT  Device,
@@ -85,6 +91,7 @@ IoCompleteIrp(
 
 #define IoIsIrpComplete(irp)        (TRUE==((irp)->Flags.Completed))
 
+SAL_SUCCESS
 STATUS
 IoGetPciDevicesMatchingSpecification(
     IN          PCI_SPEC        Specification,
@@ -94,6 +101,7 @@ IoGetPciDevicesMatchingSpecification(
     OUT         DWORD*           NumberOfDevices
     );
 
+SAL_SUCCESS
 STATUS
 IoGetPciDevicesMatchingLocation(
     IN          PCI_SPEC_LOCATION           Specification,
@@ -109,10 +117,11 @@ IoGetPciSecondaryBusForBridge(
     OUT         BYTE*                       Bus
     );
 
+SAL_SUCCESS
 STATUS
 IoGetDevicesByType(
     IN                      DEVICE_TYPE         DeviceType,
-    _When_(*NumberOfDevices>0,OUT_PTR)
+    _When_(*NumberOfDevices>0,OUT_PTR)      
     _When_(*NumberOfDevices==0, OUT_PTR_MAYBE_NULL)
                             PDEVICE_OBJECT**    DeviceObjects,
     OUT                     DWORD*              NumberOfDevices
@@ -130,10 +139,11 @@ IoBuildDeviceIoControlRequest(
     IN          PDEVICE_OBJECT      DeviceObject,
     IN_OPT      PVOID               InputBuffer,
     IN          DWORD               InputBufferLength,
-    OUT_OPT     PVOID               OutputBuffer,
+    IN_OPT      PVOID               OutputBuffer,
     IN          DWORD               OutputBufferLength
     );
 
+SAL_SUCCESS
 STATUS
 IoReadDeviceEx(
     IN                          PDEVICE_OBJECT          DeviceObject,
@@ -145,6 +155,7 @@ IoReadDeviceEx(
 
 #define IoReadDevice(Dev,Buf,Len,Off)                  IoReadDeviceEx((Dev),(Buf),(Len),(Off),FALSE)
 
+SAL_SUCCESS
 STATUS
 IoWriteDeviceEx(
     IN                          PDEVICE_OBJECT          DeviceObject,
@@ -156,6 +167,7 @@ IoWriteDeviceEx(
 
 #define IoWriteDevice(Dev,Buf,Len,Off)                  IoWriteDeviceEx((Dev),(Buf),(Len),(Off),FALSE)
 
+SAL_SUCCESS
 STATUS
 IoAllocateMdl(
     IN          PVOID           VirtualAddress,
@@ -182,6 +194,7 @@ IoMdlGetTranslationPair(
     IN          DWORD           Index
     );
 
+SAL_SUCCESS
 STATUS
 IoRegisterInterruptEx(
     IN          PIO_INTERRUPT           Interrupt,
@@ -234,6 +247,7 @@ IoGetCurrentDateTime(
 /////////                        FILE OPERATIONS                                        /////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+SAL_SUCCESS
 STATUS
 IoCreateFile(
     OUT_PTR     PFILE_OBJECT*           Handle,
@@ -243,43 +257,30 @@ IoCreateFile(
     IN          BOOLEAN                 Asynchronous
     );
 
+SAL_SUCCESS
 STATUS
 IoCloseFile(
     IN          PFILE_OBJECT            FileHandle
     );
 
+SAL_SUCCESS
 STATUS
 IoReadFile(
     IN          PFILE_OBJECT            FileHandle,
     IN          QWORD                   BytesToRead,
     IN_OPT      QWORD*                  FileOffset,
-    OUT_WRITES_BYTES(BytesToRead)
-                PVOID                   Buffer,
+    OUT         PVOID                   Buffer,
     OUT         QWORD*                  BytesRead
     );
 
-STATUS
-IoWriteFile(
-    IN          PFILE_OBJECT            FileHandle,
-    IN          QWORD                   BytesToWrite,
-    IN_OPT      QWORD*                  FileOffset,
-    IN_READS_BYTES(BytesToWrite)
-                PVOID                   Buffer,
-    OUT         QWORD*                  BytesWritten
-    );
-
-STATUS
-IoGetFileSize(
-    IN          PFILE_OBJECT            FileHandle,
-    OUT         QWORD*                  FileSize
-    );
-
+SAL_SUCCESS
 STATUS
 IoQueryInformationFile(
     IN          PFILE_OBJECT            FileHandle,
     OUT         PFILE_INFORMATION       FileInformation
     );
 
+SAL_SUCCESS
 STATUS
 IoQueryDirectoryFile(
     IN          PFILE_OBJECT                    FileHandle,

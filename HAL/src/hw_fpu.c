@@ -56,13 +56,11 @@ HalActivateFpu(
     void
     )
 {
-#if INCLUDE_FP_SUPPORT
     // We have nothing here, no commonlib, no runtime support if something
     // goes wrong => we need to halt
     if (!_HalCheckBasicFpuFeatures()) __halt();
 
     _HalEnableFpu();
-#endif
 }
 #pragma optimize( "", on )
 
@@ -120,7 +118,6 @@ HalSetActiveFpuFeatures(
     _In_        XCR0_SAVED_STATE            Features
     )
 {
-#if INCLUDE_FP_SUPPORT
     if (!_HalCheckRequestedFpuFeatures(Features))
     {
         return STATUS_CPU_UNSUPPORTED_FEATURE;
@@ -132,9 +129,6 @@ HalSetActiveFpuFeatures(
     {
         return STATUS_CPU_UNSUPPORED_XSAVE_FEATURE_SIZE;
     }
-#else
-    UNREFERENCED_PARAMETER(Features);
-#endif // INCLUDE_FP_SUPPORT
 
     return STATUS_SUCCESS;
 }
@@ -145,7 +139,6 @@ HalGetActiveFpuFeatures(
     _Out_opt_   DWORD*                      AvailableFeaturesSaveSize
     )
 {
-#if INCLUDE_FP_SUPPORT
     if (ActivatedFeaturesSaveSize != NULL || AvailableFeaturesSaveSize != NULL)
     {
         CPUID_INFO cpuidFeatInfo;
@@ -164,10 +157,4 @@ HalGetActiveFpuFeatures(
     }
 
     return _xgetbv(XCR0_INDEX);
-#else
-    if (ActivatedFeaturesSaveSize != NULL) *ActivatedFeaturesSaveSize = 0;
-    if (AvailableFeaturesSaveSize != NULL) *AvailableFeaturesSaveSize = 0;
-
-    return MAX_QWORD;
-#endif // INCLUDE_FP_SUPPORT
 }

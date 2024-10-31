@@ -7,8 +7,6 @@
 #define PREDEFINED_IDT_ENTRY_SIZE               16
 
 #pragma pack(push,1)
-
-#pragma warning(push)
 //warning C4214: nonstandard extension used : bit field types other than int
 #pragma warning(disable:4214)
 // 6.14.1, Vol 3, No. 56
@@ -24,7 +22,7 @@ typedef struct _IDT_ENTRY
     // IST = Interrupt Stack Table
     // if set to 0 will use legacy stack switching
     // else will use IST entry from TSS
-    WORD            IST                 : 3;
+    WORD            IST                 : 3;    
     WORD            Reserved0           : 5;    // these must be 0 on x64
     WORD            Type                : 4;
     WORD            Reserved1           : 1;    // 0
@@ -35,7 +33,7 @@ typedef struct _IDT_ENTRY
     DWORD           Reserved;
 } IDT_ENTRY, *PIDT_ENTRY;
 STATIC_ASSERT( sizeof( IDT_ENTRY ) == PREDEFINED_IDT_ENTRY_SIZE );
-#pragma warning(pop)
+#pragma warning(default:4214)
 
 typedef struct _IDT
 {
@@ -67,6 +65,7 @@ IdtInitialize(
     IdtReload();
 }
 
+SAL_SUCCESS
 STATUS
 IdtInstallDescriptor(
     IN                  BYTE            InterruptIndex,

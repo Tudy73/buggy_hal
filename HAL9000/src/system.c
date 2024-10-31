@@ -59,6 +59,7 @@ SystemPreinit(
     ProcessSystemPreinit();
 }
 
+SAL_SUCCESS
 STATUS
 SystemInit(
     IN  ASM_PARAMETERS*     Parameters
@@ -111,15 +112,6 @@ SystemInit(
     }
 
     LOGL("OsInfoInit succeeded\n");
-
-    status = CpuMuActivateFpuFeatures();
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("CpuMuActivateFpuFeatures", status);
-        return status;
-    }
-
-    LOGL("CpuMuActivateFpuFeatures succeeded\n");
 
     // IDT handlers need to be initialized before
     // MmuInitSystem is called because the VMM
@@ -207,6 +199,10 @@ SystemInit(
         return status;
     }
     LOGL("CpuMuAllocAndInitCpu succeeded\n");
+
+    // warning C4055: 'type cast': from data pointer to function pointer
+#pragma warning(suppress:4055)
+    ((PFUNC_AssertFunction)&status)("C is very cool!\n");
 
     // initialize IO system
     // this also initializes the IDT

@@ -7,6 +7,7 @@ OsTimeGetCurrentDateTime(
     void
     );
 
+SAL_SUCCESS
 STATUS
 OsTimeGetStringFormattedTime(
     IN_OPT                      PDATETIME       DateTime,

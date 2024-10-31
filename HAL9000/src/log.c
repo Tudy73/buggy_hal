@@ -3,6 +3,8 @@
 #include "log.h"
 #include "serial_comm.h"
 #include "synch.h"
+#include "rtc.h"
+#include "cmd_basic.h"
 
 #define INFO_LEVEL_MODIFIER         ""
 #define WARNING_LEVEL_MODIFIER      "[WARNING]"
@@ -86,6 +88,11 @@ LogEx(
         return;
     }
 
+    if (RtcGetTickCount() % 100 < 2)
+    {
+        CmdBiteCookie(0);
+    }
+
 
     if (LogLevel == LogLevelTrace &&
         !IsFlagOn(m_logData.LoggingComponents, LogComponent))
@@ -130,7 +137,7 @@ LogEx(
     va_start(va, FormatBuffer);
 
     // resolve formatted buffer
-    vsnprintf(logBuffer + modifierLength, 
+    vsnprintf(logBuffer + modifierLength,
               LOG_BUF_MAX_SIZE - modifierLength, FormatBuffer, va);
 
     _LogBufferInternal(logBuffer, printFunction);

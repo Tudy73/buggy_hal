@@ -1,6 +1,3 @@
-%ifdef CL_NO_RUNTIME_CHECKS
-
-%else
 global __security_check_cookie
 
 extern __report_cookie_corruption
@@ -25,4 +22,3 @@ __security_check_cookie:
 .end:
     mov             rax, r11
     ret
-%endif ; CL_NO_RUNTIME_CHECKS

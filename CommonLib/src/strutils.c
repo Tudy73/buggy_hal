@@ -80,7 +80,7 @@ itoa(
         index++;
     }
 
-    // we convert the number and get a
+    // we convert the number and get a 
     // reversed ordered string
     while (0 != value)
     {
@@ -151,7 +151,7 @@ atoi(
         BYTE currentCharValue;
 
         ASSERT(isascii(buffer[i]));
-
+        
         // it's ok to use tolower even if we have a digit
         // because they are 0x30 -> 0x39 and an OR with 0x20 leaves
         // them unmodified
@@ -186,7 +186,7 @@ atoi(
     {
         // we can either have any negative number
         // or positive numbers smaller or equal to MAX_DWORD
-        ASSERT( negative || (value <= MAX_DWORD) );
+        ASSERT( negative || ( !negative && value <= MAX_DWORD ) );
 
         *((PDWORD)valueAddress) = (DWORD) value;
     }

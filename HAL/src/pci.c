@@ -5,22 +5,19 @@
 #define PCI_CONFIG_ADDRESS                              0xCF8
 #define PCI_CONFIG_DATA                                 0xCFC
 
-#pragma pack(push,1)
-
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 
 // warning C4214: nonstandard extension used: bit field types other than int
 #pragma warning(disable:4214)
 
+#pragma pack(push,1)
 typedef union _PCI_CONFIG_REGISTER
 {
     struct
     {
-        // Since all reads and writes must be both 32-bits and aligned to work on all
-        // implementations, the two lowest bits of PCI_CONFIG_REGISTER must always be zero,
+        // Since all reads and writes must be both 32-bits and aligned to work on all 
+        // implementations, the two lowest bits of PCI_CONFIG_REGISTER must always be zero, 
         // with the remaining six bits allowing you to choose each of the 64 32-bit words.
         BYTE    __Reserved0                 : 2;
 
@@ -35,8 +32,11 @@ typedef union _PCI_CONFIG_REGISTER
 } PCI_CONFIG_REGISTER, *PPCI_CONFIG_REGISTER;
 STATIC_ASSERT(sizeof(PCI_CONFIG_REGISTER) == sizeof(DWORD));
 
-#pragma warning(pop)
 #pragma pack(pop)
+
+#pragma warning(default:4214)
+
+#pragma warning(default:4201)
 
 #define PCI_SET_CONFIG_REGISTER(X,Bus,Dev,Func,Reg)     \
             memzero(&(X), sizeof(PCI_CONFIG_REGISTER)); \
@@ -85,10 +85,11 @@ BOOLEAN
 _PciRetrieveDevice(
     IN      PCI_DEVICE_LOCATION DeviceLocation,
     IN      WORD                BytesToRead,
-    OUT_WRITES_BYTES_ALL(BytesToRead)
+    OUT_WRITES_BYTES_ALL(BytesToRead)     
             PPCI_DEVICE_DESCRIPTION         PciDevice
     );
 
+SAL_SUCCESS
 STATUS
 PciRetrieveNextDevice(
     IN      BOOLEAN         ResetSearch,
@@ -125,7 +126,7 @@ PciRetrieveNextDevice(
         return STATUS_DEVICE_NO_MORE_DEVICES;
     }
 
-    do
+    do 
     {
         foundDevice = _PciRetrieveDevice(__currentDeviceLocation, BytesToRead, PciDevice);
 
@@ -165,7 +166,7 @@ BOOLEAN
 _PciRetrieveDevice(
     IN      PCI_DEVICE_LOCATION DeviceLocation,
     IN      WORD                BytesToRead,
-    OUT_WRITES_BYTES_ALL(BytesToRead)
+    OUT_WRITES_BYTES_ALL(BytesToRead)     
             PPCI_DEVICE_DESCRIPTION         PciDevice
     )
 {

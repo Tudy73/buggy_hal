@@ -45,6 +45,7 @@ _AtaWriteBuffer(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _AtaPrepareDmaTransfer(
     IN          PATA_DEVICE_REGISTERS                       AtaDevice,
@@ -55,6 +56,7 @@ _AtaPrepareDmaTransfer(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _AtaValidateTranslationPair(
     IN          PMDL_TRANSLATION_PAIR                       TranslationPair
@@ -309,6 +311,7 @@ _AtaWriteBuffer(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _AtaPrepareDmaTransfer(
     IN          PATA_DEVICE_REGISTERS                       AtaDevice,
@@ -469,6 +472,7 @@ _AtaPrepareDmaTransfer(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _AtaValidateTranslationPair(
     IN          PMDL_TRANSLATION_PAIR                       TranslationPair
@@ -521,6 +525,7 @@ _AtaWriteDmaRegisters(
     _AtaWriteRegister(AtaDevice, AtaRegisterBusStatus, (!WriteOperation * ATA_BUS_CMD_READ_BIT) );
 }
 
+SAL_SUCCESS
 STATUS
 AtaInitialize(
     IN                              PPCI_DEVICE_DESCRIPTION     PciDevice,
@@ -584,7 +589,6 @@ AtaInitialize(
     pDeviceExtension->DeviceRegisters.ControlBase = (WORD)((0 != ctrlAddress) ? (ctrlAddress + 2) : ATA_FIXED_CONTROL_ADDRESS[SecondaryChannel]);
     pDeviceExtension->DeviceRegisters.BusMasterBase = (WORD) busAddress;
     pDeviceExtension->DeviceRegisters.NoInterrupt = ATA_DCTRL_REG_NIEN;
-    pDeviceExtension->SecondaryChannel = SecondaryChannel;
     pDeviceExtension->Slave = Slave;
 
     LOG_TRACE_STORAGE("Base address: 0x%x\n", pDeviceExtension->DeviceRegisters.BaseRegister);
@@ -701,6 +705,7 @@ AtaInitialize(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 AtaReadWriteSectors(
     IN                                          PATA_DEVICE     Device,

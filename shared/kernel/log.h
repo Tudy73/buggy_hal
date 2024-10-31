@@ -1,6 +1,6 @@
 #pragma once
 
-#include "native/string.h"
+#include "string.h"
 #include "cpu.h"
 //#define NO_COMM
 

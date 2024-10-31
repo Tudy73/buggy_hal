@@ -6,27 +6,20 @@
 #define CMD_SHELL       ">>"
 #define CMD_SHELL_SIZE  (sizeof(CMD_SHELL))
 
-#define CMD_HISTORY_MAX_SIZE    16
-
-static char m_CmdHistory[CMD_HISTORY_MAX_SIZE][CHARS_PER_LINE] = { 0 };
-
-static DWORD m_CmdHistoryFirstIndex = 0;
-static DWORD m_CmdHistorySize = 0;
-
 KEYCODE
 getch(
     void
-)
+    )
 {
     KEYCODE result = KEY_UNKNOWN;
 
-    do
+    do 
     {
         result = KeyboardWaitForKey();
         KeyboardDiscardLastKey();
     } while (KEY_UNKNOWN == result);
 
-
+    
 
     return result;
 }
@@ -36,28 +29,24 @@ gets_s(
     OUT_WRITES_Z(BufferSize)    char*       Buffer,
     IN                          DWORD       BufferSize,
     OUT                         DWORD*      UsedSize
-)
+    )
 {
     DWORD i;
-    int j;
     DWORD maxBufferSize;
     KEYCODE key;
     char c;
     SCREEN_POSITION cursorPosition;
-    DWORD cmdHistoryIndex;
 
     i = 0;
-    j = 0;
     key = KEY_UNKNOWN;
     c = 0;
-    cmdHistoryIndex = MAX_DWORD;
 
     cursorPosition.Line = LINES_PER_SCREEN - 1;
     cursorPosition.Column = CMD_SHELL_SIZE;
 
-    ASSERT(NULL != UsedSize);
-    ASSERT(NULL != Buffer);
-    ASSERT(BufferSize > 1);
+    ASSERT( NULL != UsedSize );
+    ASSERT( NULL != Buffer );
+    ASSERT( BufferSize > 1 );
 
     // we cannot write more than a line or then the buffer we have
     // we add sizeof('\0') because we do not need to print the NULL terminator :)
@@ -86,105 +75,24 @@ gets_s(
         if (KEY_RETURN == key)
         {
             // enter was pressed
-
-            if (0 == strlen_s(Buffer, maxBufferSize))
-            {
-                break;
-            }
-
-            if (CMD_HISTORY_MAX_SIZE == m_CmdHistorySize)
-            {
-                m_CmdHistoryFirstIndex = (m_CmdHistoryFirstIndex + 1) % CMD_HISTORY_MAX_SIZE;
-            }
-            else
-            {
-                m_CmdHistorySize++;
-            }
-
-            strtrim(Buffer);
-
-            strncpy(m_CmdHistory[(m_CmdHistoryFirstIndex + m_CmdHistorySize - 1) % CMD_HISTORY_MAX_SIZE], Buffer, maxBufferSize - 1);
-
             break;
         }
 
         if (KEY_BACKSPACE == key)
         {
             // delete a key
-            // if i is already 0 nothing to delete
             if (0 != i)
             {
-                // shift left all the characters in the Buffer after the current position
-                for (j = (int)i; j <= (int)strlen_s(Buffer, maxBufferSize - 1); j++)
-                {
-                    Buffer[j - 1] = Buffer[j];
-                }
-
+                // if i is already 0 nothing to delete
                 cursorPosition.Column--;
                 --i;
+                Buffer[i] = '\0';
             }
 
             // go to the next iteration
             continue;
         }
-
-        if (KEY_DELETE == key)
-        {
-            /// TODO: implement
-            continue;
-        }
-
-        if (KEY_UP == key)
-        {
-            if (0 == m_CmdHistorySize)  // nothing in history
-            {
-                continue;
-            }
-
-            if (MAX_DWORD == cmdHistoryIndex)
-            {
-                cmdHistoryIndex = (m_CmdHistoryFirstIndex + m_CmdHistorySize - 1) % CMD_HISTORY_MAX_SIZE;
-            }
-            else if (cmdHistoryIndex != m_CmdHistoryFirstIndex) // not yet at first command
-            {
-                cmdHistoryIndex = (cmdHistoryIndex - 1) % CMD_HISTORY_MAX_SIZE;
-            }
-
-            strncpy(Buffer, m_CmdHistory[cmdHistoryIndex], maxBufferSize - 1);
-
-            i = strlen_s(Buffer, maxBufferSize);
-            cursorPosition.Column = CMD_SHELL_SIZE + (BYTE)i;
-
-            // go to the next iteration
-            continue;
-        }
-
-        if (KEY_DOWN == key)
-        {
-            if (0 == m_CmdHistorySize)  // nothing in history
-            {
-                continue;
-            }
-
-            if (MAX_DWORD == cmdHistoryIndex)
-            {
-                continue;
-            }
-
-            if (cmdHistoryIndex != (m_CmdHistoryFirstIndex + m_CmdHistorySize - 1) % CMD_HISTORY_MAX_SIZE) // not yet at last command
-            {
-                cmdHistoryIndex = (cmdHistoryIndex + 1) % CMD_HISTORY_MAX_SIZE;
-            }
-
-            strncpy(Buffer, m_CmdHistory[cmdHistoryIndex], maxBufferSize - 1);
-
-            i = strlen_s(Buffer, maxBufferSize);
-            cursorPosition.Column = CMD_SHELL_SIZE + (BYTE)i;
-
-            // go to the next iteration
-            continue;
-        }
-
+        
         if (KEY_LEFT == key)
         {
             // move cursor to the left
@@ -202,47 +110,27 @@ gets_s(
         if (KEY_RIGHT == key)
         {
             // move cursor to the right
-            if (i < maxBufferSize - 2)
+            if (i < maxBufferSize - 2 )
             {
                 // we use -2 because if we move the cursor we must
                 // be able to write a character afterward
-
+                
                 // [BUFFER_SIZE - 2][CHAR AFTER CURSOR MOVEMENT][\0]
 
-                // move cursor only if there are characters to the right
-                if ('\0' != Buffer[i])
+                cursorPosition.Column++;
+
+                // if the character in the buffer differs from the NULL terminator we need to
+                // preserve its value
+                if ('\0' == Buffer[i])
                 {
-                    cursorPosition.Column++;
-                    ++i;
+                    // need to set space in buffer, else it will still
+                    // be NULL terminated and we can't write anything to it
+                    Buffer[i] = ' ';
                 }
+                ++i;
             }
 
             // go to the next iteration
-            continue;
-        }
-
-        if (KEY_HOME == key)
-        {
-            if (0 != i)
-            {
-                cursorPosition.Column -= (BYTE)i;
-                i = 0;
-            }
-
-            continue;
-        }
-
-        if (KEY_END == key)
-        {
-            i = strlen_s(Buffer, maxBufferSize);
-            cursorPosition.Column = CMD_SHELL_SIZE + (BYTE)i;
-
-            continue;
-        }
-
-        if (KEY_TAB == key)
-        {
-            /// TODO: implement
             continue;
         }
 
@@ -251,13 +139,6 @@ gets_s(
         if (0 != c)
         {
             // we have an ASCII character
-
-            // shift right all the characters in the Buffer after the current position
-            for (j = strlen_s(Buffer, maxBufferSize - 1); j >= (int)i; j--)
-            {
-                Buffer[j + 1] = Buffer[j];
-            }
-
             Buffer[i] = c;
             ++i;
             cursorPosition.Column++;

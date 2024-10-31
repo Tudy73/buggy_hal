@@ -105,7 +105,7 @@ BootModulesInit(
             status = _MapSingleModule(&pModuleInformation[i], &pMultibootModules[i]);
             if (!SUCCEEDED(status))
             {
-                LOG_WARNING("_MapSingleModule failed with status 0x%x\n", status);
+                LOG_FUNC_ERROR("_MapSingleModule", status);
 
                 // This component (boot_module.c) doesn't know which modules are essential and which are not
                 // so we do our best effort to map as many modules as possible even if some fail
@@ -247,7 +247,7 @@ _MapSingleModule(
 
         if (bootMod.Length == 0)
         {
-            LOG_WARNING("There's nothing we can do with a module with size 0!\n");
+            LOG_ERROR("There's nothing we can do with a module with size 0!\n");
             status = STATUS_NO_DATA_AVAILABLE;
             __leave;
         }

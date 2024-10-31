@@ -42,14 +42,12 @@ typedef struct _TIMER_TEST_MULTIPLE_CTX
     union
     {
         // Used when the threads share the same timer
-        // "TestThreadTimerMultipleThreads"
         struct
         {
             EX_TIMER    Timer;
         } Same;
 
         // Used when each thread has its own timer
-        // "TestThreadTimerMultipleTimers"
         struct
         {
             QWORD       TimeToSleep;
@@ -138,7 +136,6 @@ STATUS
         EX_TIMER timer;
         STATUS status;
 
-        // Each thread has its own timer, create it here
         status = ExTimerInit(&timer,
                              ExTimerTypeRelativePeriodic,
                              pTimer->Different.TimeToSleep);
@@ -152,8 +149,6 @@ STATUS
 
             // Record the time each thread wakes up
             DWORD curIdx = _InterlockedIncrement(&pTimer->Different.WakeupArray->CurrentIndex) - 1;
-
-            // Store the system time in which the current thread has woken up in an array
             pTimer->Different.WakeupArray->SystemWakeTimeUs[curIdx] = IomuGetSystemTimeUs();
         }
 
@@ -181,11 +176,6 @@ void
 
     if (bPrepareArray)
     {
-        // "TestThreadTimerMultipleTimers"
-        // Each thread has its own timer, but we need to hold a shared structure which will tell each thread what kind
-        // of timer it has to create (i.e. its timeout period) and how many times it should wait for it.
-        // This shared structure will also keep the system time in us when each thread is woken up.
-
         PTID_WAKEUP pWakeupTimes = ExAllocatePoolWithTag(PoolAllocateZeroMemory | PoolAllocatePanicIfFail,
                                                          sizeof(TID_WAKEUP) + (sizeof(QWORD) * NumberOfThreads * TIMER_TEST_NO_OF_ITERATIONS),
                                                          HEAP_TEST_TAG,
@@ -213,9 +203,6 @@ void
     }
     else
     {
-        // "TestThreadTimerMultipleThreads"
-        // All the threads use the same timer, initialize and start it here
-
         PTIMER_TEST_MULTIPLE_CTX pTimerCtx;
         STATUS status;
 
@@ -232,35 +219,15 @@ void
     }
 }
 
-
 void
-(__cdecl TestThreadTimerMultipleThreadsPostFinish)(
-    IN              PVOID               Context,
-    IN              DWORD               NumberOfThreads
-    )
-{
-    PTIMER_TEST_MULTIPLE_CTX pContext;
-
-    UNREFERENCED_PARAMETER(NumberOfThreads);
-
-    pContext = (PTIMER_TEST_MULTIPLE_CTX)Context;
-
-    ASSERT(pContext != NULL);
-
-    ExTimerUninit(&pContext->Same.Timer);
-}
-
-
-void
-(__cdecl TestThreadTimerMultipleTimersPostFinish)(
+(__cdecl TestThreadTimerPostFinish)(
     IN              PVOID               Context,
     IN              DWORD               NumberOfThreads
     )
 {
     PTIMER_TEST_MULTIPLE_CTX* pContexts;
     PTIMER_TEST_MULTIPLE_CTX pFirstContext;
-
-    UNREFERENCED_PARAMETER(NumberOfThreads);
+    DWORD* pIterations;
 
     pContexts = (PTIMER_TEST_MULTIPLE_CTX*) Context;
 
@@ -270,8 +237,15 @@ void
 
     ASSERT(pFirstContext != NULL);
 
+    pIterations = NULL;
+
     __try
     {
+        pIterations = ExAllocatePoolWithTag(PoolAllocatePanicIfFail | PoolAllocateZeroMemory,
+                                            NumberOfThreads * sizeof(DWORD),
+                                            HEAP_TEST_TAG,
+                                            0);
+
         for (DWORD i = 1; i < pFirstContext->Different.WakeupArray->NumberOfEntries; ++i)
         {
             QWORD prevWakeTimeUs = pContexts[0]->Different.WakeupArray->SystemWakeTimeUs[i-1];
@@ -292,6 +266,6 @@ void
     }
     __finally
     {
-
+        ExFreePoolWithTag(pIterations, HEAP_TEST_TAG);
     }
 }

@@ -3,8 +3,6 @@
 #include "lock_common.h"
 #include "ex_event.h"
 
-#pragma warning(push)
-
 // warning C4200: nonstandard extension used: zero-sized array in struct/union
 #pragma warning(disable: 4200)
 typedef struct _NETWORK_PORT_DRIVER_DATA
@@ -66,7 +64,7 @@ typedef struct _FRAME_DESCRIPTOR_ENTRY
 STATIC_ASSERT_INFO(sizeof(FRAME_DESCRIPTOR_ENTRY) - sizeof(FRAME_DESCRIPTOR) == FIELD_OFFSET(FRAME_DESCRIPTOR_ENTRY, Frame),
                    "Frame must always be the last element in the structure");
 
-#pragma warning(pop)
+#pragma warning(default:4200)
 
 void
 NetworkPortDevicePreinit(
@@ -98,5 +96,5 @@ NetworkPortAllocateFrameDescriptor(
 
 void
 NetworkPortFreeFrameDescriptor(
-    IN          PFRAME_DESCRIPTOR_ENTRY Descriptor
+    IN          PFRAME_DESCRIPTOR_ENTRY Descriptor                
     );

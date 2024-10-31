@@ -67,7 +67,7 @@ BitmapInitEx(
     ASSERT(NULL != Bitmap);
     ASSERT(NULL != BitmapBuffer);
 
-    memset(BitmapBuffer,
+    memset(BitmapBuffer, 
            Set ? MAX_BYTE : 0,
            Bitmap->BufferSize);
 
@@ -103,7 +103,7 @@ BitmapSetBitValue(
 {
     ASSERT(NULL != Bitmap);
     ASSERT(Index < Bitmap->BitCount);
-
+    
     _BitmapChangeBit(Bitmap->BitmapBuffer, Index, Set);
 }
 

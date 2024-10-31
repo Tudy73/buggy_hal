@@ -15,6 +15,7 @@ static const DWORD TST_VMM_ALLOCATION_SIZES[] =
 static const DWORD TST_VMM_NO_OF_SIZES = ARRAYSIZE(TST_VMM_ALLOCATION_SIZES);
 
 static
+SAL_SUCCESS
 STATUS
 _TstVmmAllocationAndDeallocation(
     IN          DWORD       AllocationSize,
@@ -42,6 +43,7 @@ TestVmmAllocAndFreeFunctions(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _TstVmmAllocationAndDeallocation(
     IN          DWORD       AllocationSize,

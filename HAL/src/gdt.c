@@ -53,9 +53,9 @@ GdtInstallDescriptor(
     // check if system descriptor
     sysDescriptor = IsBitSet(Flags, SegmentDescriptorSystemDescriptor);
 
-    tssDescriptor = sysDescriptor && ((SystemSegment64BitTssAvailable == Type) || (SystemSegment64BitTssBusy == Type));
+    tssDescriptor = sysDescriptor & ((SystemSegment64BitTssAvailable == Type) || (SystemSegment64BitTssBusy == Type));
 
-    if (sysDescriptor && !tssDescriptor)
+    if (sysDescriptor & !tssDescriptor)
     {
         // we can't install other system descriptors except TSS ones
         return STATUS_INVALID_PARAMETER3;

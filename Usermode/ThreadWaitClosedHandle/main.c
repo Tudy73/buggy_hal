@@ -47,7 +47,7 @@ __main(
         status = SyscallThreadWaitForTermination(hThread, &terminationStatus);
         if (SUCCEEDED(status))
         {
-            LOG_ERROR("SyscallThreadWaitForTermination should have failed because thread handle was closed!");
+            LOG_ERROR("SyscallThreadWaitForTermination should have failed because thread handle was closed!\n");
         }
     }
     __finally

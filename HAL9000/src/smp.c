@@ -8,9 +8,6 @@
 #include "pit.h"
 #include "io.h"
 #include "ex_event.h"
-#include "hw_fpu.h"
-
-extern void ApAsmStub();
 
 #define SIPI_VECTOR_SHIFT                       12
 
@@ -129,6 +126,7 @@ _SmpSignalAllAPs(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _SmpInstallInterruptRoutines(
     void
@@ -144,14 +142,6 @@ _SmpRetrieveMatchingCpus(
     _Out_writes_to_opt_(MaximumCpuMatches,*NumberOfCpusMatching)
             PPCPU*                  CpuList,
     OUT     DWORD*                  NumberOfCpusMatching
-    );
-
-static
-void
-_SmpSetupInitialApStack(
-    IN      PVOID                   InitialStack,
-    IN      PCPU*                   CorrespondingCpu,
-    OUT_PTR PVOID*                  ResultingStack
     );
 
 static FUNC_InterruptFunction       _SmpApicTimerIsr;
@@ -170,6 +160,7 @@ SmpPreinit(
     RwSpinlockInit(&m_smpData.CpuLock);
 }
 
+SAL_SUCCESS
 STATUS
 _No_competing_thread_
 SmpInit(
@@ -233,6 +224,7 @@ SmpInit(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 _No_competing_thread_
 SmpSetupLowerMemory(
@@ -301,7 +293,13 @@ SmpSetupLowerMemory(
                 return status;
             }
 
-            _SmpSetupInitialApStack(pCpu->StackTop, pCpu, &pCpu->StackTop);
+            // setup 'return' stack
+            // 4 * sizeof(PVOID) for arguments
+            // sizeof(PVOID) for RA
+            // sizeof(PVOID) for proper alignment
+            pCpu->StackTop = (PVOID)((PBYTE)pCpu->StackTop - 4 * sizeof(PVOID) - sizeof(PVOID) - sizeof(PVOID));
+            *((PQWORD)pCpu->StackTop) = (QWORD)ApInitCpu;
+            *((PQWORD)pCpu->StackTop + 1) = (QWORD)pCpu;
         }
 
 
@@ -553,6 +551,7 @@ SmpSendGenericIpiEx(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 SmpCpuInit(
     void
@@ -632,6 +631,7 @@ _SmpSignalAllAPs(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _SmpInstallInterruptRoutines(
     void
@@ -721,60 +721,6 @@ _SmpRetrieveMatchingCpus(
     *NumberOfCpusMatching = noOfMatches;
 
     return noOfMatches > MaximumCpuMatches ? STATUS_BUFFER_TOO_SMALL : STATUS_SUCCESS;
-}
-
-//  STACK TOP
-//  -----------------------------------------------------------------
-//  |                                                               |
-//  |       Shadow Space                                            |
-//  |                                                               |
-//  |     1st Param = (PCPU) Cpu                                    |
-//  -----------------------------------------------------------------
-//  |     Dummy Function RA = 0xDEADC0DE'DEADC0DE                   |
-//  -----------------------------------------------------------------
-//  |     ApInitCpu                                                 |
-//  -----------------------------------------------------------------
-//  |                                                               |
-//  |       Shadow Space                                            |
-//  |                                                               |
-//  |                                                               |
-//  -----------------------------------------------------------------
-//  |     Function RA = ApAsmStub                                   |
-//  -----------------------------------------------------------------
-//  |     HalActivateFpu                                            |
-//  -----------------------------------------------------------------
-static
-void
-_SmpSetupInitialApStack(
-    IN      PVOID                   InitialStack,
-    IN      PCPU*                   CorrespondingCpu,
-    OUT_PTR PVOID*                  ResultingStack
-    )
-{
-    PBYTE pStackTop;
-
-    ASSERT(InitialStack != NULL);
-    ASSERT(IsAddressAligned(InitialStack, PAGE_SIZE));
-    ASSERT(CorrespondingCpu != NULL);
-    ASSERT(ResultingStack != NULL);
-
-    pStackTop = InitialStack;
-
-    // setup 'return' stack
-    // 4 * sizeof(PVOID) for arguments
-    // sizeof(PVOID) for RA
-    // sizeof(PVOID) for proper alignment
-    pStackTop = (pStackTop - SHADOW_STACK_SIZE - sizeof(PVOID) - sizeof(PVOID));
-    *((PQWORD)pStackTop) = (QWORD)ApInitCpu;
-    *((PQWORD)pStackTop + 1) = 0xDEADC0DE'DEADC0DE;
-    *((PQWORD)pStackTop + 2) = (QWORD)CorrespondingCpu;
-
-    pStackTop = (pStackTop - SHADOW_STACK_SIZE - sizeof(PVOID) - sizeof(PVOID));
-
-    *((PQWORD)pStackTop) = (QWORD)HalActivateFpu;
-    *((PQWORD)pStackTop + 1) = (QWORD)ApAsmStub;
-
-    *ResultingStack = pStackTop;
 }
 
 static

@@ -1,7 +1,5 @@
 #pragma once
 
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 
@@ -187,4 +185,4 @@ typedef struct _DISPATCHER_CONTEXT
     DWORD Fill0;
 } DISPATCHER_CONTEXT, *PDISPATCHER_CONTEXT;
 
-#pragma warning(pop)
+#pragma warning(default:4201)

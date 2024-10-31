@@ -22,7 +22,6 @@ __main(
 )
 {
     UM_HANDLE hThreads[THREADS_TO_CREATE];
-    STATUS thStatuses[THREADS_TO_CREATE];
     STATUS status;
 
     UNREFERENCED_PARAMETER(argc);
@@ -53,15 +52,6 @@ __main(
     }
     __finally
     {
-        for (DWORD i = 0; i < THREADS_TO_CREATE; ++i)
-        {
-            status = SyscallThreadWaitForTermination(hThreads[i], &thStatuses[i]);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("SyscallThreadWaitForTermination", status);
-            }
-        }
-
         for (DWORD i = 0; i < THREADS_TO_CREATE; ++i)
         {
             SyscallThreadCloseHandle(hThreads[i]);

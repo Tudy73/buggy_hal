@@ -10,7 +10,7 @@ __main(
 )
 {
     UM_HANDLE hThread;
-    volatile QWORD test = 0;
+    STATUS status;
 
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
@@ -19,13 +19,10 @@ __main(
 
     __try
     {
-        UmThreadCreate((PFUNC_ThreadStart) 0x7000'3203ULL, NULL, &hThread);
-
-        // wait for the process to crash
-        while(&hThread)
+        status = UmThreadCreate(NULL, NULL, &hThread);
+        if (SUCCEEDED(status))
         {
-            test += 1;
-            _mm_pause();
+            LOG_ERROR("UmThreadCreate succeeded, but it should have failed because of NULL function\n");
         }
     }
     __finally

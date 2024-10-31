@@ -2,19 +2,19 @@
 #include "fat_operations.h"
 #include "fat_utils.h"
 
-
 static
 void
 _FatPopulateFileInformationFromFatEntry(
     IN      PFAT_DATA               FatData,
     IN      PDIR_ENTRY              DirEntry,
     OUT     PFILE_INFORMATION       FileInformation
-);
+    );
 
+SAL_SUCCESS
 STATUS
 FatInitVolume(
     INOUT          PFAT_DATA           FatData
-)
+    )
 {
     STATUS status;
     FAT_BPB bpb;
@@ -136,11 +136,12 @@ FatInitVolume(
     LOG_TRACE_FILESYSTEM("ALlocation size: %d\n", FatData->AllocationSize);
 
     ASSERT_INFO(FatData->AllocationSize >= pVolumeDevice->DeviceAlignment,
-        "The FAT driver does not handle issues caused by greater device alignment needed by volume devices");
+                "The FAT driver does not handle issues caused by greater device alignment needed by volume devices" );
 
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 FatSearch(
     IN      PFAT_DATA               FatData,
@@ -149,10 +150,10 @@ FatSearch(
     IN      BYTE                    SearchType,
     OUT_OPT PFILE_INFORMATION       FileInformation,
     OUT     QWORD*                  ParentSector
-)
+    )
 {
     // name of current entry to search ( name between backslashes )
-    char partialName[LONG_NAME_MAX_CHARS];
+    char partialName[13];
 
     // current index of partial name in the full path name
     DWORD startIndexInName;
@@ -202,7 +203,7 @@ FatSearch(
         LOG_TRACE_FILESYSTEM("Search for root directory\n");
 
         // we have the root directory
-        if (ATTR_DIRECTORY != (SearchType & ATTR_DIRECTORY))
+        if (ATTR_DIRECTORY != ( SearchType & ATTR_DIRECTORY) )
         {
             return STATUS_FILE_TYPE_INVALID;
         }
@@ -220,7 +221,7 @@ FatSearch(
         return STATUS_SUCCESS;
     }
 
-    startIndexInName++;
+    startIndexInName++;   
 
     do
     {
@@ -243,7 +244,7 @@ FatSearch(
 
         if (partialNameLength >= sizeof(partialName) || partialNameLength == 0)
         {
-            LOG_TRACE_FILESYSTEM("[ERROR]Partial name length is %u\n", partialNameLength);
+            LOG_ERROR("Partial name length is %u\n", partialNameLength);
             return STATUS_PATH_NOT_VALID;
         }
 
@@ -257,7 +258,7 @@ FatSearch(
         if (!SUCCEEDED(status))
         {
             // something bad happened
-            LOG_TRACE_FILESYSTEM("[ERROR]SearchDirectoryEntry failed with status 0x%x\n", status);
+            LOG_FUNC_ERROR("SearchDirectoryEntry", status);
             return status;
         }
 
@@ -273,17 +274,17 @@ FatSearch(
     return STATUS_SUCCESS;
 }
 
+SAL_SUCCESS
 STATUS
 FatReadFile(
-    IN      PFAT_DATA   FatData,
+    IN      PFAT_DATA   FatData, 
     IN      QWORD       BaseFileSector,
     IN      QWORD       SectorOffset,
-    IN      QWORD       DirEntrySector,
     IN      PVOID       Buffer,
     IN      QWORD       SectorsToRead,
     OUT     QWORD*      SectorsRead,
     IN      BOOLEAN     Asynchronous
-)
+    )
 {
     STATUS status;
     QWORD currentSector;                // the sector in which the file is
@@ -293,12 +294,7 @@ FatReadFile(
     QWORD bytesToRead;
     PBYTE pData;
     QWORD sectorsTraversed;
-
-    DIR_ENTRY  dirEntry = { 0 };
-    QWORD dirEntryIndex = 0;
-    DATETIME currentDateTime = { 0 };
-    FATDATE fatDate = { 0 };
-    FATTIME fatTime = { 0 };
+    BOOLEAN firstIteration;
 
     LOG_FUNC_START;
 
@@ -306,7 +302,7 @@ FatReadFile(
     ASSERT(NULL != Buffer);
 
     ASSERT(IsAddressAligned(BaseFileSector, FatData->SectorsPerCluster));
-
+    
     status = STATUS_SUCCESS;
     currentSector = BaseFileSector;
     nextSector = 0;
@@ -314,22 +310,17 @@ FatReadFile(
     sectorsTraversed = 0;
     sectorsToRead = 0;
     bytesToRead = 0;
-    pData = (PBYTE)Buffer;
+    pData = (PBYTE) Buffer;
+    firstIteration = TRUE;
 
     LOG_TRACE_FILESYSTEM("Base file sector: [0x%x]\n", BaseFileSector);
     LOG_TRACE_FILESYSTEM("Sector offset: [0x%x]\n", SectorOffset);
-
-    if (0 == sectorsRemaining)
-    {
-        *SectorsRead = 0;
-        return STATUS_SUCCESS;
-    }
 
     while (sectorsTraversed + FatData->SectorsPerCluster <= SectorOffset)
     {
         ASSERT(SectorOffset >= FatData->SectorsPerCluster);
 
-        status = NextSectorInClusterChain(FatData, currentSector, &nextSector, FALSE);
+        status = NextSectorInClusterChain(FatData, currentSector, &nextSector);
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("NextSectorInClusterChain", status);
@@ -343,23 +334,41 @@ FatReadFile(
 
     // we modify current sector to sectorToReach because
     // we do not need to read the whole cluster
-    currentSector = currentSector + (SectorOffset % FatData->SectorsPerCluster);
+    currentSector = currentSector + ( SectorOffset % FatData->SectorsPerCluster );
 
-    // it is possible that the first sector to read is in the middle of a cluster
-    sectorsToRead = min(sectorsRemaining, FatData->SectorsPerCluster - (SectorOffset % FatData->SectorsPerCluster));
-    bytesToRead = sectorsToRead * FatData->BytesPerSector;
-
-    for (;;)
+    while (0 != sectorsRemaining)
     {
+        if (!firstIteration)
+        {
+            // find next sector
+            status = NextSectorInClusterChain(FatData, currentSector, &nextSector);
+            if (!SUCCEEDED(status))
+            {
+                LOG_FUNC_ERROR("NextSectorInClusterChain", status);
+                return status;
+            }
+
+            currentSector = nextSector;
+
+            if (0 == nextSector)
+            {
+                // reached EOC marker
+                *SectorsRead = (SectorsToRead - sectorsRemaining);
+                return STATUS_SUCCESS;
+            }
+        }
+
+        sectorsToRead = min(FatData->SectorsPerCluster, sectorsRemaining);
+        bytesToRead = sectorsToRead * FatData->BytesPerSector;
+
         LOG_TRACE_FILESYSTEM("Will read [0x%x] sectors starting from sector [0x%x]\n", sectorsToRead, currentSector);
 
-        status = IoReadDeviceEx(
-            FatData->VolumeDevice,
-            pData,
-            &bytesToRead,
-            currentSector * FatData->BytesPerSector,
-            Asynchronous
-        );
+        status = IoReadDeviceEx(FatData->VolumeDevice,
+                                pData,
+                                &bytesToRead,
+                                currentSector * FatData->BytesPerSector,
+                                Asynchronous
+                                );
         if (!SUCCEEDED(status))
         {
             LOG_FUNC_ERROR("IoReadDeviceEx", status);
@@ -370,208 +379,15 @@ FatReadFile(
         pData = pData + bytesToRead;
 
         sectorsRemaining = sectorsRemaining - sectorsToRead;
-
-        if (0 == sectorsRemaining)
-        {
-            break;
-        }
-
-        // find next sector
-        status = NextSectorInClusterChain(FatData, currentSector, &nextSector, FALSE);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("NextSectorInClusterChain", status);
-            return status;
-        }
-
-        if (0 == nextSector)
-        {
-            // reached EOC marker
-            break;
-        }
-
-        currentSector = nextSector;
-
-        sectorsToRead = min(FatData->SectorsPerCluster, sectorsRemaining);
-        bytesToRead = sectorsToRead * FatData->BytesPerSector;
+        firstIteration = FALSE;
     }
 
-    status = GetDirEntryFromSector(FatData, DirEntrySector, BaseFileSector, &dirEntryIndex, &dirEntry);
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("GetDirEntryFromSector", status);
-        return status;
-    }
-
-    currentDateTime = IoGetCurrentDateTime();
-
-    ConvertDateTimeToFatDateTime(&currentDateTime, &fatDate, &fatTime);
-
-    dirEntry.DIR_LstAccDate = fatDate;
-
-    status = WriteDirEntryToSector(FatData, DirEntrySector, dirEntryIndex, &dirEntry);
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("WriteDirEntryToSector", status);
-        return status;
-    }
-
-    *SectorsRead = SectorsToRead - sectorsRemaining;
+    *SectorsRead = SectorsToRead;
 
     return status;
 }
 
-STATUS
-FatWriteFile(
-    IN      PFAT_DATA   FatData,
-    IN      QWORD       BaseFileSector,
-    IN      QWORD       SectorOffset,
-    IN      QWORD       DirEntrySector,
-    IN      PVOID       Buffer,
-    IN      QWORD       SectorsToWrite,
-    OUT     QWORD*      SectorsWritten,
-    IN      BOOLEAN     Asynchronous
-)
-{
-    STATUS status;
-    QWORD currentSector;                // the sector in which the file is
-    QWORD nextSector;
-    QWORD sectorsRemaining;             // how much of the file we have parsed so far
-    QWORD sectorsToWrite;
-    QWORD bytesToWrite;
-    PBYTE pData;
-    QWORD sectorsTraversed;
-    DIR_ENTRY  dirEntry = { 0 };
-    QWORD dirEntryIndex = 0;
-    DATETIME currentDateTime = { 0 };
-    FATDATE fatDate = { 0 };
-    FATTIME fatTime = { 0 };
-    DWORD nextByteToWrite = 0;
-
-    LOG_FUNC_START;
-
-    ASSERT(NULL != FatData);
-    ASSERT(NULL != Buffer);
-
-    ASSERT(IsAddressAligned(BaseFileSector, FatData->SectorsPerCluster));
-
-    status = STATUS_SUCCESS;
-    currentSector = BaseFileSector;
-    nextSector = 0;
-    sectorsRemaining = SectorsToWrite;
-    sectorsTraversed = 0;
-    sectorsToWrite = 0;
-    bytesToWrite = 0;
-    pData = (PBYTE)Buffer;
-
-    LOG_TRACE_FILESYSTEM("Base file sector: [0x%x]\n", BaseFileSector);
-    LOG_TRACE_FILESYSTEM("Sector offset: [0x%x]\n", SectorOffset);
-
-    if (0 == sectorsRemaining)
-    {
-        *SectorsWritten = 0;
-        return STATUS_SUCCESS;
-    }
-
-    while (sectorsTraversed + FatData->SectorsPerCluster <= SectorOffset)
-    {
-        ASSERT(SectorOffset >= FatData->SectorsPerCluster);
-
-        status = NextSectorInClusterChain(FatData, currentSector, &nextSector, TRUE);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("NextSectorInClusterChain", status);
-            return status;
-        }
-
-        currentSector = nextSector;
-        sectorsTraversed = sectorsTraversed + FatData->SectorsPerCluster;
-    }
-    ASSERT(0 != currentSector);
-
-    // we modify current sector to sectorToReach because
-    // we do not need to write to the whole cluster
-    currentSector = currentSector + (SectorOffset % FatData->SectorsPerCluster);
-
-    // it is possible that the first sector to write to is in the middle of a cluster
-    sectorsToWrite = min(sectorsRemaining, FatData->SectorsPerCluster - (SectorOffset % FatData->SectorsPerCluster));
-    bytesToWrite = sectorsToWrite * FatData->BytesPerSector;
-
-    for (;;)
-    {
-        LOG_TRACE_FILESYSTEM("Will write [0x%x] sectors starting from sector [0x%x]\n", sectorsToWrite, currentSector);
-
-        status = IoWriteDeviceEx(
-            FatData->VolumeDevice,
-            pData,
-            &bytesToWrite,
-            currentSector * FatData->BytesPerSector,
-            Asynchronous
-        );
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("IoWriteDeviceEx", status);
-            return status;
-        }
-        ASSERT(bytesToWrite == sectorsToWrite * FatData->BytesPerSector);
-
-        pData = pData + bytesToWrite;
-
-        sectorsRemaining = sectorsRemaining - sectorsToWrite;
-
-        if (0 == sectorsRemaining)
-        {
-            break;
-        }
-
-        // find next sector, extend chain if necessary
-        status = NextSectorInClusterChain(FatData, currentSector, &nextSector, TRUE);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("NextSectorInClusterChain", status);
-            return status;
-        }
-
-        currentSector = nextSector;
-
-        sectorsToWrite = min(FatData->SectorsPerCluster, sectorsRemaining);
-        bytesToWrite = sectorsToWrite * FatData->BytesPerSector;
-    }
-
-    status = GetDirEntryFromSector(FatData, DirEntrySector, BaseFileSector, &dirEntryIndex, &dirEntry);
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("GetDirEntryFromSector", status);
-        return status;
-    }
-
-    nextByteToWrite = (DWORD)(SectorOffset + SectorsToWrite) * FatData->BytesPerSector;
-
-    if (nextByteToWrite > dirEntry.DIR_FileSize)
-    {
-        dirEntry.DIR_FileSize = nextByteToWrite;
-    }
-
-    currentDateTime = IoGetCurrentDateTime();
-
-    ConvertDateTimeToFatDateTime(&currentDateTime, &fatDate, &fatTime);
-
-    dirEntry.DIR_LstAccDate = fatDate;
-    dirEntry.DIR_WrtDate = fatDate;
-    dirEntry.DIR_WrtTime = fatTime;
-
-    status = WriteDirEntryToSector(FatData, DirEntrySector, dirEntryIndex, &dirEntry);
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("WriteDirEntryToSector", status);
-        return status;
-    }
-
-    *SectorsWritten = SectorsToWrite;
-
-    return status;
-}
-
+SAL_SUCCESS
 STATUS
 FatSearchDirectoryEntry(
     IN      PFAT_DATA               FatData,
@@ -581,7 +397,7 @@ FatSearchDirectoryEntry(
     OUT     QWORD*                  SearchResult,
     OUT_OPT PFILE_INFORMATION       FileInformation,
     OUT     QWORD*                  ParentSector
-)
+    )
 {
     STATUS status;
     LONG_DIR_ENTRY* pLongEntry;
@@ -589,8 +405,7 @@ FatSearchDirectoryEntry(
     QWORD sectorToParse;
     int index;
     QWORD bytesToRead;
-    char normalizedShortName[SHORT_NAME_MAX_LENGTH] = { 0 };
-    char normalizedLongName[LONG_NAME_MAX_CHARS + 1] = { 0 };
+    char normalizedName[16];
     DWORD requiredLength;
 
     LOG_FUNC_START;
@@ -629,7 +444,7 @@ FatSearchDirectoryEntry(
                     pEntry = NULL;
 
                     // we go to the next sector we need to parse
-                    status = NextSectorInClusterChain(FatData, sectorToParse, &sectorToParse, FALSE);
+                    status = NextSectorInClusterChain(FatData, sectorToParse, &sectorToParse);
                     if (!SUCCEEDED(status))
                     {
                         // something bad happened :(
@@ -656,10 +471,10 @@ FatSearchDirectoryEntry(
                 }
 
                 status = IoReadDeviceEx(FatData->VolumeDevice,
-                    pEntry,
-                    &bytesToRead,
-                    sectorToParse * FatData->BytesPerSector,
-                    TRUE
+                                        pEntry,
+                                        &bytesToRead,
+                                        sectorToParse * FatData->BytesPerSector,
+                                        TRUE
                 );
                 if (!SUCCEEDED(status))
                 {
@@ -682,26 +497,20 @@ FatSearchDirectoryEntry(
 
             if ((pLongEntry->LDIR_Attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME)
             {
-                status = WritePartialLongFatNameToName(pLongEntry, LONG_NAME_MAX_CHARS + 1, normalizedLongName);
-                ASSERT(SUCCEEDED(status));
-
+                // we don't care for long directory entries ATM
+                // should be implemented in future versions
                 index++;
                 continue;
             }
 
-            // short directory entry
-
             LOG_TRACE_FILESYSTEM("[%d]: [%s][%x]\n", index, pEntry[index].DIR_Name, pEntry[index].DIR_Attr);
 
-            status = ConvertFatNameToName((char*)pEntry[index].DIR_Name, SHORT_NAME_MAX_LENGTH, normalizedShortName, &requiredLength);
+            status = ConvertFatNameToName((char*)pEntry[index].DIR_Name, 16, normalizedName, &requiredLength);
             ASSERT(SUCCEEDED(status));
 
+            LOG_TRACE_FILESYSTEM("Normalized: [%s]\n", normalizedName);
 
-            LOG_TRACE_FILESYSTEM("Normalized long  name: [%s]\n", normalizedLongName);
-            LOG_TRACE_FILESYSTEM("Normalized short name: [%s]\n", normalizedShortName);
-
-            if (0 == stricmp(normalizedLongName, Name) ||
-                0 == stricmp(normalizedShortName, Name))
+            if (0 == stricmp(normalizedName, Name))
             {
                 // we found what we were looking for
                 QWORD cluster;
@@ -738,15 +547,9 @@ FatSearchDirectoryEntry(
                 __leave;
             }
 
-            // reset long name
-            // in case the next short directory entry does not have associated long name entries
-            // it must not use the long name from a previous entry
-            normalizedLongName[0] = '\0';
-
-            // we increment the index to search the next directory entry
-
+            // we increment the index to search the next directory
+            // entry
             index++;
-
 
         } while (FREE_ALL != pEntry[index].DIR_Name[0]);
 
@@ -773,7 +576,7 @@ _FatPopulateFileInformationFromFatEntry(
     IN      PFAT_DATA               FatData,
     IN      PDIR_ENTRY              DirEntry,
     OUT     PFILE_INFORMATION       FileInformation
-)
+    )
 {
     STATUS status;
 
@@ -798,7 +601,7 @@ _FatPopulateFileInformationFromFatEntry(
     LOG_TRACE_FILESYSTEM("Attributes: [0x%x]\n", DirEntry->DIR_Attr);
 
     // the root entry has no creation or write datetime
-    if (FILE_ATTRIBUTE_VOLUME != FileInformation->FileAttributes)
+    if ( FILE_ATTRIBUTE_VOLUME != FileInformation->FileAttributes )
     {
         status = ConvertFatDateTimeToDateTime(&DirEntry->DIR_CrtDate, &DirEntry->DIR_CrtTime, &FileInformation->CreationTime);
         ASSERT(SUCCEEDED(status));
@@ -808,15 +611,16 @@ _FatPopulateFileInformationFromFatEntry(
     }
 }
 
+SAL_SUCCESS
 STATUS
 FatCreateDirectoryEntry(
-    IN      PFAT_DATA       FatData,
-    IN_Z    char*           Name,
+    IN      PFAT_DATA       FatData, 
+    IN_Z    char*           Name, 
     IN      BYTE            FileAttributes
-)
+    )
 {
-    char fullPath[MAX_PATH] = { 0 };
-    char newEntryName[SHORT_NAME_CHARS + 1];
+    char fullPath[MAX_PATH];
+    char newEntryName[SHORT_NAME_CHARS+1];
     char* pPathToBackSlash;
     DWORD lastBackslashIndex = 0;
     QWORD parentSector;
@@ -841,48 +645,37 @@ FatCreateDirectoryEntry(
     QWORD bytesToRead;
 
     LOG_FUNC_START;
-    // Step 0. Check pointers
+                                    // Step 0. Check pointers
     ASSERT(NULL != FatData);
     ASSERT(NULL != Name);
 
-    LOG_TRACE_FILESYSTEM("[ERROR]Will create file [%s]\n", Name);
+    LOG("Will create file [%s]\n", Name);
 
     memset(newEntryName, ' ', SHORT_NAME_CHARS);
 
     // fullPath contains the path until the new directory entry
-    pPathToBackSlash = (char*)strrchr(Name, FAT_DELIMITER);
+    pPathToBackSlash = (char*) strrchr(Name, FAT_DELIMITER);
     bytesToRead = 0;
 
-    if (Name == pPathToBackSlash && FAT_DELIMITER != Name[0])
+    if (Name == pPathToBackSlash)
     {
         // path is not specified correctly
-        LOG_TRACE_FILESYSTEM("'%c' not found in [%s]\n", FAT_DELIMITER, Name);
         return STATUS_PATH_NOT_VALID;
     }
 
-    lastBackslashIndex = (DWORD)(pPathToBackSlash - Name);
+    lastBackslashIndex = (DWORD) ( pPathToBackSlash - Name );
 
     // in fullPath we copy the parent directory path
-    if (0 == lastBackslashIndex)
-    {
-        strcpy(fullPath, "\\"); // parent directory is root
-    }
-    else
-    {
-        strncpy(fullPath, Name, lastBackslashIndex);
-    }
+    strncpy(fullPath, Name, lastBackslashIndex);
 
     // newEntryName contains only the name of the to be created entry
     strcpy(newEntryName, (Name + lastBackslashIndex + 1));
-
-    LOG_TRACE_FILESYSTEM("Directory: [%s]\n", fullPath);
-    LOG_TRACE_FILESYSTEM("Filename: [%s]\n", newEntryName);
 
     // we don't want a NULL terminated string
     newEntryName[strlen(newEntryName)] = ' ';
 
     // Step 1. Check if to be parent directory exists
-    status = FatSearch(FatData, fullPath, &parentSector, ATTR_DIRECTORY, NULL, &parentDirEntrySector);
+    status = FatSearch(FatData, fullPath, &parentSector, ATTR_DIRECTORY, NULL,&parentDirEntrySector);
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("FatSearch", status);
@@ -890,14 +683,14 @@ FatCreateDirectoryEntry(
     }
 
     // Step 2. Check if there is already a file with the same name
-    status = FatSearch(FatData, Name, &dummySector, ATTR_NORMAL, NULL, &parentDirEntrySector);
+    status = FatSearch(FatData, Name, &dummySector, ATTR_NORMAL, NULL,&parentDirEntrySector);
     if (SUCCEEDED(status) || (STATUS_FILE_TYPE_INVALID == status))
     {
         return STATUS_FILE_ALREADY_EXISTS;
     }
 
     // Step 3. Go to the EOC cluster of the parent directory entry
-    /// TODO check if there is enough space before the end cluster
+
     // we find the cluster of the parent
     status = ClusterOfSector(FatData, parentSector, &currentClusterInChain);
     if (!SUCCEEDED(status))
@@ -910,7 +703,7 @@ FatCreateDirectoryEntry(
 
     // this loop will place in currentClusterInChain the last cluster belonging
     // to the parent directory
-    while (!FAT32_EOC(tempCluster))
+    while (FAT32_BAD_CLUSTER > (tempCluster & FAT32_CLUSTER_MASK))
     {
         currentClusterInChain = tempCluster;
 
@@ -933,7 +726,7 @@ FatCreateDirectoryEntry(
     // we allocate space for the last cluster
     bytesToRead = FatData->BytesPerSector * FatData->SectorsPerCluster;
 
-    pEntry = (DIR_ENTRY*)ExAllocatePoolWithTag(PoolAllocateZeroMemory, (DWORD)bytesToRead, HEAP_TEMP_TAG, 0);
+    pEntry = (DIR_ENTRY*)ExAllocatePoolWithTag(PoolAllocateZeroMemory, (DWORD) bytesToRead, HEAP_TEMP_TAG, 0);
     if (NULL == pEntry)
     {
         status = STATUS_HEAP_NO_MORE_MEMORY;
@@ -944,10 +737,10 @@ FatCreateDirectoryEntry(
     __try
     {
         status = IoReadDeviceEx(FatData->VolumeDevice,
-            pEntry,
-            &bytesToRead,
-            finalSector * FatData->BytesPerSector,
-            TRUE
+                                pEntry,
+                                &bytesToRead,
+                                finalSector * FatData->BytesPerSector,
+                                TRUE
         );
         if (!SUCCEEDED(status))
         {
@@ -964,13 +757,10 @@ FatCreateDirectoryEntry(
         }
 
         // Step 4. Is there space in the current cluster?
-        /// TODO check for enough space for long dir entries
         found = FALSE;
         while (index < (FatData->EntriesPerSector * FatData->SectorsPerCluster))
         {
-            if ((FREE_ENTRY == pEntry[index].DIR_Name[0]) ||
-                (FREE_ALL == pEntry[index].DIR_Name[0]) ||
-                (FREE_JAP_ENTRY == pEntry[index].DIR_Name[0]))
+            if ((FREE_ENTRY == pEntry[index].DIR_Name[0]) || (FREE_ALL == pEntry[index].DIR_Name[0]) || (FREE_JAP_ENTRY == pEntry[index].DIR_Name[0]))
             {
                 // we found a place where we can place our new entry
                 found = TRUE;
@@ -1025,9 +815,9 @@ FatCreateDirectoryEntry(
             }
 
             status = IoReadDevice(FatData->VolumeDevice,
-                pFSinfo,
-                &bytesToRead,
-                1 * FatData->BytesPerSector
+                                  pFSinfo,
+                                  &bytesToRead,
+                                  1 * FatData->BytesPerSector
             );
             if (!SUCCEEDED(status))
             {
@@ -1057,7 +847,15 @@ FatCreateDirectoryEntry(
 
         // set the new file attributes
         pEntry[index].DIR_Attr = FileAttributes;
-        pEntry[index].DIR_FileSize = 0; // redundant because of MemSet to 0
+
+        if (ATTR_DIRECTORY == (FileAttributes & (ATTR_DIRECTORY | ATTR_VOLUME_ID)))
+        {
+            pEntry[index].DIR_FileSize = 0; // redundant because of MemSet to 0
+        }
+        else
+        {
+            pEntry[index].DIR_FileSize = 0;
+        }
 
         // get current date time
         crtDateTime = IoGetCurrentDateTime();
@@ -1087,9 +885,9 @@ FatCreateDirectoryEntry(
         // we write the changes made to pFSinfo and to the parent cluster of the new entry
         bytesToRead = FatData->BytesPerSector;
         status = IoWriteDevice(FatData->VolumeDevice,
-            pFSinfo,
-            &bytesToRead,
-            1 * FatData->BytesPerSector
+                               pFSinfo,
+                               &bytesToRead,
+                               1 * FatData->BytesPerSector
         );
         if (!SUCCEEDED(status))
         {
@@ -1100,9 +898,9 @@ FatCreateDirectoryEntry(
 
         bytesToRead = FatData->BytesPerSector * FatData->SectorsPerCluster;
         status = IoWriteDevice(FatData->VolumeDevice,
-            pEntry,
-            &bytesToRead,
-            finalSector * FatData->BytesPerSector
+                               pEntry,
+                               &bytesToRead,
+                               finalSector * FatData->BytesPerSector
         );
         if (!SUCCEEDED(status))
         {
@@ -1183,9 +981,9 @@ FatCreateDirectoryEntry(
         }
 
         status = IoWriteDevice(FatData->VolumeDevice,
-            pEntry,
-            &bytesToRead,
-            sectorAllocated * FatData->BytesPerSector
+                               pEntry,
+                               &bytesToRead,
+                               sectorAllocated * FatData->BytesPerSector
         );
         if (!SUCCEEDED(status))
         {
@@ -1212,9 +1010,9 @@ FatCreateDirectoryEntry(
 
 
         status = IoReadDevice(FatData->VolumeDevice,
-            pFAT,
-            &bytesToRead,
-            fatEntrySector * FatData->BytesPerSector
+                              pFAT,
+                              &bytesToRead,
+                              fatEntrySector * FatData->BytesPerSector
         );
         if (!SUCCEEDED(status))
         {
@@ -1229,9 +1027,9 @@ FatCreateDirectoryEntry(
 
 
         status = IoWriteDevice(FatData->VolumeDevice,
-            pFAT,
-            &bytesToRead,
-            fatEntrySector * FatData->BytesPerSector
+                               pFAT,
+                               &bytesToRead,
+                               fatEntrySector * FatData->BytesPerSector
         );
         if (!SUCCEEDED(status))
         {
@@ -1266,16 +1064,15 @@ FatCreateDirectoryEntry(
     return status;
 }
 
-// warning C6101: Returning uninitialized memory '*DirectoryInformation'.  A successful path through the function does not set the named _Out_ parameter. 
-
+SAL_SUCCESS
 STATUS
 FatQueryDirectory(
     IN                                              PFAT_DATA                       FatData,
     IN                                              QWORD                           DirectorySector,
     IN                                              DWORD                           DirectoryInformationSize,
-    OUT_WRITES_BYTES(DirectoryInformationSize)      FILE_DIRECTORY_INFORMATION      *DirectoryInformation,
+    OUT_WRITES_BYTES(DirectoryInformationSize)      PFILE_DIRECTORY_INFORMATION     DirectoryInformation,
     OUT                                             DWORD*                          RequiredDirectionInformationSize
-)
+    )
 {
     STATUS status;
     LONG_DIR_ENTRY* pLongEntry;
@@ -1286,12 +1083,6 @@ FatQueryDirectory(
     DWORD requiredSize;
     PFILE_DIRECTORY_INFORMATION pCurEntry;
     PFILE_DIRECTORY_INFORMATION pPrevEntry;
-
-    char longName[LONG_NAME_MAX_CHARS + 1] = { 0 };
-    DWORD longNameLength;
-    char shortName[SHORT_NAME_MAX_LENGTH] = { 0 };
-    DWORD shortNameLength;
-    DWORD curStructureSize;
 
     ASSERT(NULL != FatData);
     ASSERT(NULL != DirectoryInformation || 0 == DirectoryInformationSize);
@@ -1307,9 +1098,6 @@ FatQueryDirectory(
     pCurEntry = DirectoryInformation;
     pPrevEntry = NULL;
 
-    longNameLength = 0;
-    shortNameLength = 0;
-
     __try
     {
         do
@@ -1324,7 +1112,7 @@ FatQueryDirectory(
                     pEntry = NULL;
 
                     // we go to the next sector by following the cluster chain
-                    status = NextSectorInClusterChain(FatData, sectorToParse, &sectorToParse, FALSE);
+                    status = NextSectorInClusterChain(FatData, sectorToParse, &sectorToParse);
                     if (!SUCCEEDED(status))
                     {
                         LOG_FUNC_ERROR("NextSectorInClusterChain", status);
@@ -1351,10 +1139,10 @@ FatQueryDirectory(
 
                 // we read the next cluster
                 status = IoReadDeviceEx(FatData->VolumeDevice,
-                    pEntry,
-                    &bytesToRead,
-                    sectorToParse * FatData->BytesPerSector,
-                    TRUE
+                                        pEntry,
+                                        &bytesToRead,
+                                        sectorToParse * FatData->BytesPerSector,
+                                        TRUE
                 );
                 if (!SUCCEEDED(status))
                 {
@@ -1378,69 +1166,58 @@ FatQueryDirectory(
 
             pLongEntry = (LONG_DIR_ENTRY*)&(pEntry[index]);
 
+
             if ((pLongEntry->LDIR_Attr & ATTR_LONG_NAME_MASK) == ATTR_LONG_NAME)
             {
-                status = WritePartialLongFatNameToName(pLongEntry, LONG_NAME_MAX_CHARS + 1, longName);
-                ASSERT(SUCCEEDED(status));
+                // ATM do nothing with long entries
 
+                // handling needs to be implemented
                 index++;
                 continue;
             }
-
-            // short directory entry
-
-            status = ConvertFatNameToName((char*)pEntry[index].DIR_Name, SHORT_NAME_MAX_LENGTH, shortName, &shortNameLength);
-            ASSERT(SUCCEEDED(status));
-
-            longNameLength = strlen_s(longName, LONG_NAME_MAX_CHARS);
-            if (0 == longNameLength)
+            else
             {
-                longNameLength = shortNameLength;
-                strncpy(longName, shortName, shortNameLength);
-            }
+                // found a short directory entry
+                char name[16];
+                DWORD nameLength;
+                DWORD curStructureSize;
 
-            curStructureSize = sizeof(FILE_DIRECTORY_INFORMATION) + longNameLength;
+                status = ConvertFatNameToName((char*)pEntry[index].DIR_Name, 16, name, &nameLength);
+                ASSERT(SUCCEEDED(status));
 
-            requiredSize = requiredSize + curStructureSize;
+                curStructureSize = sizeof(FILE_DIRECTORY_INFORMATION) + nameLength;
 
-            if (requiredSize <= DirectoryInformationSize)
-            {
-                if (NULL != pPrevEntry)
+                requiredSize = requiredSize + curStructureSize;
+
+                if (requiredSize <= DirectoryInformationSize)
                 {
-                    // update previous entry offset
-                    pPrevEntry->NextEntryOffset = (DWORD)((PBYTE)pCurEntry - (PBYTE)pPrevEntry);
+                    if (NULL != pPrevEntry)
+                    {
+                        // update previous entry offset
+                        pPrevEntry->NextEntryOffset = (DWORD)((PBYTE)pCurEntry - (PBYTE)pPrevEntry);
+                    }
+
+                    LOG_TRACE_FILESYSTEM("[%d]: [%s][%x]\n", index, pEntry[index].DIR_Name, pEntry[index].DIR_Attr);
+                    LOG_TRACE_FILESYSTEM("File name: [%s]\n", name);
+
+                    // populate current entry
+
+                    // we set offset to 0 because we don't know if there are any entries
+                    // after us
+                    pCurEntry->NextEntryOffset = 0;
+
+                    _FatPopulateFileInformationFromFatEntry(FatData, &pEntry[index], &pCurEntry->BasicFileInformation);
+                    pCurEntry->FilenameLength = nameLength;
+                    memcpy(pCurEntry->Filename, name, nameLength);
+
+                    // update previous and current entry
+                    pPrevEntry = pCurEntry;
+                    pCurEntry = (PFILE_DIRECTORY_INFORMATION)((PBYTE)pCurEntry + curStructureSize);
                 }
-
-                LOG_TRACE_FILESYSTEM("[%d]: [%s][%x]\n", index, pEntry[index].DIR_Name, pEntry[index].DIR_Attr);
-                LOG_TRACE_FILESYSTEM("File short name: [%s]\n", shortName);
-                LOG_TRACE_FILESYSTEM("File long  name: [%s]\n", longName);
-
-                // populate current entry
-
-                // we set offset to 0 because we don't know if there are any entries
-                // after us
-                pCurEntry->NextEntryOffset = 0;
-
-                _FatPopulateFileInformationFromFatEntry(FatData, &pEntry[index], &pCurEntry->BasicFileInformation);
-                memcpy(pCurEntry->ShortFilename, shortName, shortNameLength);
-
-                pCurEntry->FilenameLength = longNameLength;
-                memcpy(pCurEntry->Filename, longName, longNameLength);
-
-                // update previous and current entry
-                pPrevEntry = pCurEntry;
-                pCurEntry = (PFILE_DIRECTORY_INFORMATION)((PBYTE)pCurEntry + curStructureSize);
             }
-
-            // reset long name
-            // in case the next short directory entry does not have associated long name entries
-            // it must not use the long name from a previous entry
-            longName[0] = '\0';
-
 
             // we increase the index in the entry array
             index++;
-
         } while (FREE_ALL != pEntry[index].DIR_Name[0]);
     }
     __finally

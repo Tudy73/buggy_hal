@@ -14,9 +14,6 @@
 #include "strutils.h"
 #include "smp.h"
 #include "ex_timer.h"
-#include "vmm.h"
-#include "pit.h"
-
 
 #pragma warning(push)
 
@@ -27,22 +24,6 @@
 #pragma warning(disable:4029)
 
 static FUNC_IpcProcessEvent _CmdIpiCmd;
-
-#define CPU_BOUND_CPU_USAGE         (100 * MS_IN_US)
-#define IO_BOUND_CPU_USAGE          (0 * MS_IN_US)
-#define IO_BOUND_EVENT_TIMES        25
-
-typedef struct _BOUND_THREAD_CTX
-{
-    DWORD                   CpuUsage;
-
-    // Valid only for IO bound threads
-    DWORD                   EventWaitTimes;
-    EX_EVENT                Event;
-} BOUND_THREAD_CTX, *PBOUND_THREAD_CTX;
-
-static FUNC_ThreadStart     _ThreadCpuBound;
-static FUNC_ThreadStart     _ThreadIoBound;
 
 static
 void
@@ -129,15 +110,14 @@ void
 
     ASSERT(NumberOfParameters == 0);
 
-    LOG("%7s", "TID|");
-    LOG("%20s", "Name|");
-    LOG("%5s", "Prio|");
-    LOG("%8s", "State|");
-    LOG("%10s", "Cmp ticks|");
-    LOG("%10s", "Prt ticks|");
-    LOG("%10s", "Ttl ticks|");
-    LOG("%10s", "Process|");
-    LOG("\n");
+    printColor(MAGENTA_COLOR, "%7s", "TID|");
+    printColor(MAGENTA_COLOR, "%20s", "Name|");
+    printColor(MAGENTA_COLOR, "%5s", "Prio|");
+    printColor(MAGENTA_COLOR, "%8s", "State|");
+    printColor(MAGENTA_COLOR, "%10s", "Cmp ticks|");
+    printColor(MAGENTA_COLOR, "%10s", "Prt ticks|");
+    printColor(MAGENTA_COLOR, "%10s", "Ttl ticks|");
+    printColor(MAGENTA_COLOR, "%10s", "Process|");
 
     status = ThreadExecuteForEachThreadEntry(_CmdThreadPrint, NULL );
     ASSERT( SUCCEEDED(status));
@@ -463,200 +443,6 @@ void
     __writemsr(index, value );
 }
 
-void
-(__cdecl CmdCheckAd)(
-    IN      QWORD       NumberOfParameters
-    )
-{
-    DWORD dirtyCount;
-    DWORD accessedCount;
-    volatile BYTE* pData;
-    PML4 cr3;
-
-    ASSERT(NumberOfParameters == 0);
-
-    dirtyCount = 0;
-    accessedCount = 0;
-    pData = NULL;
-    cr3.Raw = (QWORD) __readcr3();
-
-    pData = ExAllocatePoolWithTag(PoolAllocateZeroMemory, PAGE_SIZE, HEAP_TEMP_TAG, PAGE_SIZE);
-    if (pData == NULL)
-    {
-        return;
-    }
-
-    __try
-    {
-        for (DWORD i = 0; i < PAGE_SIZE; ++i)
-        {
-            BOOLEAN bAccessed = FALSE;
-            BOOLEAN bDirty = FALSE;
-
-            PHYSICAL_ADDRESS pAddr = VmmGetPhysicalAddressEx(cr3,
-                                                             (PVOID) pData,
-                                                             &bAccessed,
-                                                             &bDirty);
-            ASSERT(pAddr != NULL);
-
-            accessedCount += (bAccessed == TRUE);
-            dirtyCount += (bDirty == TRUE);
-
-        }
-    }
-    __finally
-    {
-        ASSERT(pData != NULL);
-            ExFreePoolWithTag((PVOID)pData, HEAP_TEMP_TAG);
-            pData = NULL;
-        }
-
-    LOG("A/D: %u/%u\n", accessedCount, dirtyCount);
-}
-
-void
-(__cdecl CmdSpawnThreads)(
-    IN      QWORD       NumberOfParameters,
-    IN_Z    char*       CpuBoundString,
-    IN_Z    char*       IoBoundString
-    )
-{
-    DWORD cpuBound;
-    DWORD ioBound;
-    PTHREAD* pThreads;
-    PBOUND_THREAD_CTX pCtx;
-    STATUS status;
-
-    ASSERT(NumberOfParameters == 2);
-
-    atoi32(&cpuBound, CpuBoundString, BASE_TEN);
-    atoi32(&ioBound, IoBoundString, BASE_TEN);
-
-    pThreads = NULL;
-    pCtx = NULL;
-
-    LOG("Will spawn %u CPU bound threads and %u IO bound threads\n",
-        cpuBound, ioBound);
-
-    if (cpuBound == 0 || ioBound == 0)
-    {
-        return;
-    }
-
-    __try
-    {
-        pThreads = ExAllocatePoolWithTag(PoolAllocateZeroMemory,
-                                         sizeof(PTHREAD) * (cpuBound + ioBound),
-                                         HEAP_TEST_TAG,
-                                         0);
-        if (pThreads == NULL)
-        {
-            LOG_FUNC_ERROR_ALLOC("ExAllocatePoolWithTag", sizeof(PTHREAD) * (cpuBound + ioBound));
-            __leave;
-        }
-
-        pCtx = ExAllocatePoolWithTag(PoolAllocateZeroMemory,
-                                     sizeof(BOUND_THREAD_CTX) * (cpuBound + ioBound),
-                                     HEAP_TEST_TAG,
-                                     0);
-        if (pCtx == NULL)
-        {
-            LOG_FUNC_ERROR_ALLOC("ExAllocatePoolWithTag", sizeof(BOUND_THREAD_CTX) * (cpuBound + ioBound));
-            __leave;
-        }
-
-        // Create the CPU bound threads to execute the _ThreadCpuBound function
-        // Each thread will keep the processor busy for CPU_BOUND_CPU_USAGE us (currently 100 ms)
-        for (DWORD i = 0; i < cpuBound; ++i)
-        {
-            char thName[MAX_PATH];
-
-            snprintf(thName, MAX_PATH, "CPU-bound-%u", i);
-
-            pCtx[i].CpuUsage = CPU_BOUND_CPU_USAGE;
-
-            status = ThreadCreate(thName,
-                                  ThreadPriorityDefault,
-                                  _ThreadCpuBound,
-                                  &pCtx[i],
-                                  &pThreads[i]);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("ThreadCreate", status);
-                __leave;
-            }
-        }
-
-        // Create the IO bound threads to execute the _ThreadIoBound function
-        // These threads will block waiting for an executive event IO_BOUND_EVENT_TIMES times (currently 25 seconds)
-        // After they will be woken up they will also keep the CPU busy for IO_BOUND_CPU_USAGE us (currently 0 ms)
-        for (DWORD i = 0; i < ioBound; ++i)
-        {
-            char thName[MAX_PATH];
-
-            snprintf(thName, MAX_PATH, "IO-bound-%u", i);
-
-            pCtx[i+cpuBound].EventWaitTimes = IO_BOUND_EVENT_TIMES;
-            pCtx[i+cpuBound].CpuUsage = IO_BOUND_CPU_USAGE;
-            ExEventInit(&pCtx[i+cpuBound].Event, ExEventTypeSynchronization, FALSE);
-
-            status = ThreadCreate(thName,
-                                  ThreadPriorityDefault,
-                                  _ThreadIoBound,
-                                  &pCtx[i+cpuBound],
-                                  &pThreads[i+cpuBound]);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("ThreadCreate", status);
-                __leave;
-            }
-        }
-
-        // The main thread will signal all the IO bound events every 50 ms thus waking the IO bound threads
-        for (DWORD i = 0; i < IO_BOUND_EVENT_TIMES; ++i)
-        {
-            PitSleep(50 * MS_IN_US);
-            for (DWORD j = 0; j < ioBound; ++j)
-            {
-                ExEventSignal(&pCtx[j+cpuBound].Event);
-            }
-        }
-
-        // Wait for all the threads to finish their execution
-        for (DWORD i = 0; i < cpuBound + ioBound; ++i)
-        {
-            ThreadWaitForTermination(pThreads[i],
-                                     &status);
-        }
-
-        // List the threads statistics
-        CmdListThreads(0);
-
-        // Actually close the thread handles so the thread structures can be destroyed
-        for (DWORD i = 0; i < cpuBound + ioBound; ++i)
-        {
-            ThreadCloseHandle(pThreads[i]);
-        }
-    }
-    __finally
-    {
-        if (pCtx != NULL)
-        {
-            ExFreePoolWithTag(pCtx, HEAP_TEST_TAG);
-            pCtx = NULL;
-        }
-
-        if (pThreads != NULL)
-        {
-            ExFreePoolWithTag(pThreads, HEAP_TEST_TAG);
-            pThreads = NULL;
-        }
-    }
-
-
-
-}
-
 static
 void
 _CmdHelperPrintThreadFunctions(
@@ -672,6 +458,7 @@ _CmdHelperPrintThreadFunctions(
 }
 
 static
+SAL_SUCCESS
 STATUS
 (__cdecl _CmdThreadPrint) (
     IN      PLIST_ENTRY     ListEntry,
@@ -685,15 +472,14 @@ STATUS
 
     pThread = CONTAINING_RECORD(ListEntry, THREAD, AllList );
 
-    LOG("%6x%c", pThread->Id, '|');
-    LOG("%19s%c", pThread->Name, '|');
-    LOG("%4U%c", pThread->Priority, '|');
-    LOG("%7s%c", _CmdThreadStateToName(pThread->State), '|');
-    LOG("%9U%c", pThread->TickCountCompleted, '|');
-    LOG("%9U%c", pThread->TickCountEarly, '|');
-    LOG("%9U%c", pThread->TickCountCompleted + pThread->TickCountEarly, '|');
-    LOG("%9x%c", pThread->Process->Id, '|');
-    LOG("\n");
+    printf("%6x%c", pThread->Id, '|');
+    printf("%19s%c", pThread->Name, '|');
+    printf("%4U%c", pThread->Priority, '|');
+    printf("%7s%c", _CmdThreadStateToName(pThread->State), '|');
+    printf("%9U%c", pThread->TickCountCompleted, '|');
+    printf("%9U%c", pThread->TickCountEarly, '|');
+    printf("%9U%c", pThread->TickCountCompleted + pThread->TickCountEarly, '|');
+    printf("%9x%c", pThread->Process->Id, '|');
 
     return STATUS_SUCCESS;
 }
@@ -726,50 +512,6 @@ STATUS
     ASSERT( NULL != pCpu );
 
     printf("Hello from CPU 0x%02x [0x%02x]\n", pCpu->ApicId, pCpu->LogicalApicId);
-
-    return STATUS_SUCCESS;
-}
-
-static
-__forceinline
-void
-_ThreadBusyWait(
-    IN      QWORD       Microseconds
-    )
-{
-    QWORD start = IomuGetSystemTimeUs();
-
-    while (IomuGetSystemTimeUs() < start + Microseconds);
-}
-
-STATUS
-(__cdecl _ThreadCpuBound)(
-    IN_OPT      PVOID       Context
-    )
-{
-    PBOUND_THREAD_CTX pCtx = (PBOUND_THREAD_CTX) Context;
-
-    ASSERT(Context != NULL);
-
-    _ThreadBusyWait(pCtx->CpuUsage);
-
-    return STATUS_SUCCESS;
-}
-
-STATUS
-(__cdecl _ThreadIoBound)(
-    IN_OPT      PVOID       Context
-    )
-{
-    PBOUND_THREAD_CTX pCtx = (PBOUND_THREAD_CTX) Context;
-
-    ASSERT(Context != NULL);
-
-    for (DWORD i = 0; i < pCtx->EventWaitTimes; ++i)
-    {
-        ExEventWaitForSignal(&pCtx->Event);
-        _ThreadBusyWait(pCtx->CpuUsage);
-    }
 
     return STATUS_SUCCESS;
 }

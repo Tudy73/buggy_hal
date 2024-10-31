@@ -1,7 +1,6 @@
 %include "lib.yasm"
 
 ;; IMPORTS
-extern HalActivateFpu
 extern Entry64
 
 extern PM32_to_PM64
@@ -52,7 +51,7 @@ __gdt_base:                                             ; GDT with 1+6+2 entries
 .code16             dq      GDT_DESC_CODE16
 .end
 
-; size and address of __gdt_base
+; size and address of __gdt_base 
 __gdtr:
 .gdt_size        dw  ( __gdt_base.end - __gdt_base - 1 )
 .gdt_address     dq  GDT_BASE_ADDRESS
@@ -110,7 +109,7 @@ dq          i | P_BIT | RW_BIT
 %endrep
 
 ;; KERNEL_BASE + 0x6000
-;;
+;; 
 [bits 32]
 __EntryMultiboot:
     ; make sure interrupts are disabled
@@ -125,13 +124,13 @@ __EntryMultiboot:
     ; check if we were loaded by multiboot
     cmp     eax, MULTIBOOT_LOADER_MAGIC
     jz      .mb_load
-
+   
     ; if we get here it means we were not loaded by the MB loader
-    ; we don't know any other way of loading
+    ; we don't know any other way of loading 
     mov     eax, 'EEEE'                     ; signal error
-    mov     [0x000B8000], eax
+    mov     [0x000B8000], eax 
     cli
-    hlt
+    hlt   
 
 .mb_load:
 
@@ -164,7 +163,7 @@ __EntryMultiboot:
     ; our trampoline
     mov     esi, MULTIBOOT_BASE + ( LowGdtBase - multiboot_header )
     mov     edi, LOW_GDT_BASE_ADDRESS
-    mov     ecx, LOW_MEMORY_LENGTH
+    mov     ecx, LOW_MEMORY_LENGTH 
     cld
     rep     movsb
 
@@ -186,19 +185,40 @@ __EntryMultiboot:
 
 ; after this function call we'll be in 64 bit mode
     call    PM32_to_PM64
+%ifdef DEBUG
+[bits 64]
+    sub     rsp,                                                TRANSITION_CONFIG_size
+    mov     rcx,                                                rsp
+
+    setup_transition_config_64 rcx, GDT_DESCRIPTOR_ADDRESS, INITIAL_TOP_OF_STACK, GDT_DESC(__gdt_base,code32), GDT_DESC(__gdt_base,data32), INITIAL_TOP_OF_STACK_1T
+
+    call    PM64_to_PM32
+[bits 32]
+    sub     esp,                                                TRANSITION_CONFIG_size
+    mov     ecx,                                                esp
+
+    setup_transition_config_32 ecx, GDT_DESCRIPTOR_ADDRESS, INITIAL_TOP_OF_STACK, GDT_DESC(__gdt_base,code64), GDT_DESC(__gdt_base,data64), INITIAL_TOP_OF_STACK_1T & 0xFFFFFFFF, INITIAL_TOP_OF_STACK_1T >> 32, PML4_TABLE_BASE
+    call    PM32_to_PM64
+%endif
+    
 [bits 64]
 ;
 ; now we are using final 1T virtual addresses, full x64, have an 8K stack in place, so are ready to jump to our C code
 ;
-call_final:
-    call_func_64    HalActivateFpu
-
+call_final: 
     call            PlaceInformationInParameters
 
     call_func_64    Entry64, QWORD 1, QWORD gAsmParameters
 
+    MOV     [0x000B80A0], DWORD '6040'       
+    MOV     [0x000B80A4], DWORD '-0B0'       
+    MOV     [0x000B80A8], DWORD 'I0T0'    
+
+    MOV     [0x000B8140], DWORD 'S0E0'       
+    MOV     [0x000B8144], DWORD 'C0U0'       
+    MOV     [0x000B8148], DWORD 'R0E0'
+
 .never:
-    cli
     hlt
     jmp     .never
 
@@ -209,11 +229,11 @@ PlaceInformationInParameters:
     mov     rax,    QWORD gAsmParameters + ASM_PARAMETERS.MultibootInformation
     mov     rbx,    MULTIBOOT_INFO_ADDRESS
     mov     [rax],  rbx
-
+    
     mov     rax,    QWORD gAsmParameters + ASM_PARAMETERS.KernelBaseAddress
     mov     rbx,    QWORD KERNEL_BASE_VIRTUAL
     mov     [rax],  rbx
-
+    
     mov     rax,    QWORD gAsmParameters + ASM_PARAMETERS.KernelSize
     mov     rbx,    QWORD KERNEL_LENGTH
     mov     [rax],  rbx
@@ -230,7 +250,7 @@ PlaceInformationInParameters:
     mov     rax,    QWORD gAsmParameters + ASM_PARAMETERS.MemoryMapAddress
     mov     rbx,    LOW_MEMORY_MAP_ENTRIES_ADDRESS
     mov     [rax],  rbx
-
+    
     ret
 
 .end:

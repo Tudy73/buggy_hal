@@ -24,6 +24,7 @@ IdtInitialize(
 // Parameter:    IN BOOLEAN Present
 // Parameter:    IN PVOID HandlerAddress - Address of interrupt handler
 //******************************************************************************
+SAL_SUCCESS
 STATUS
 IdtInstallDescriptor(
     IN                  BYTE            InterruptIndex,

@@ -27,9 +27,9 @@ SyscallEntry:
     mov     rcx, rsp
 
     ; => we have KM stack
-    mov     rsp, [rdx + 0x8]
+    mov     rsp, [rdx]
 
-    ; save current UM state (w/ RAX and RSP clobbered)
+    ; save current UM state (w/ RAX, RCX, RDX, RDI and RSP clobbered)
     save_proc_state
 
     mov             rcx, rsp

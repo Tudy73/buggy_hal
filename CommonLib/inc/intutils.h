@@ -1,6 +1,5 @@
 #pragma once
 
-C_HEADER_START
 // concatenate two BYTEs to make WORD
 #define BYTES_TO_WORD(x,y)                  ((((WORD)(x))<<8)| \
                                               ((WORD)(y)))
@@ -23,13 +22,8 @@ C_HEADER_START
 #define QWORD_HIGH(x)                       (((QWORD)(x))>>32)
 #define QWORD_LOW(x)                        (((QWORD)(x))&MAX_DWORD)
 
-#ifndef max
 #define max(a,b)                            ((a)>(b)?(a):(b))
-#endif // max
-
-#ifndef min
 #define min(a,b)                            ((a)<(b)?(a):(b))
-#endif // min
 
 #define ntohd(x)    ((DWORD)                            \
                     ((((x) >> 24) & 0x0000'00FF)    |   \
@@ -47,4 +41,3 @@ CalculatePercentage(
     IN      QWORD       WholeValue,
     IN      WORD        HundredsOfPercentage
     );
-C_HEADER_END

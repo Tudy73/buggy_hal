@@ -11,7 +11,6 @@
 #include "ata.h"
 #include "filesystem.h"
 #include "fat32.h"
-#include "swapfs.h"
 #include "lapic_system.h"
 #include "dmp_io.h"
 #include "isr.h"
@@ -32,8 +31,6 @@
 
 #define HAL9000_SYSTEM_FILE_NAME            "HAL9000.ini"
 
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 typedef union __declspec(align(8)) _UPTIME
@@ -45,7 +42,7 @@ typedef union __declspec(align(8)) _UPTIME
     };
     volatile        QWORD   Raw;
 } UPTIME, *PUPTIME;
-#pragma warning(pop)
+#pragma warning(default:4201)
 
 typedef struct _REGISTERED_INTERRUPT_ENTRY
 {
@@ -78,8 +75,6 @@ typedef struct _IOMU_DATA
     UPTIME                      SystemUptime;
 
     PDEVICE_OBJECT              SystemDevice;
-
-    PFILE_OBJECT                SwapFile;
 
     DWORD                       TimerInterruptTimeUs;
     DWORD                       TimeUpdatePerCpuUs;
@@ -117,7 +112,6 @@ static const DRIVER_DECLARATION DRIVER_NAMES[] = {
     DECLARE_DRIVER("disk", DiskDriverEntry, FALSE),
     DECLARE_DRIVER("vol", VolDriverEntry, FALSE),
     DECLARE_DRIVER("fat", FatDriverEntry, FALSE),
-    DECLARE_DRIVER("swapfs", SwapFsDriverEntry, FALSE),
     DECLARE_DRIVER("eth82574L", Eth82574LDriverEntry, FALSE)
 };
 
@@ -153,12 +147,14 @@ _IomuUpdateSystemTime(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _IomuSetupRtc(
     OUT_OPT     QWORD*          TscFrequency
     );
 
 static
+SAL_SUCCESS
 STATUS
 _IomuSetupPit(
     IN          DWORD           TimerPeriodUs,
@@ -179,12 +175,6 @@ _IomuInitDrivers(
 static
 STATUS
 _IomuDetermineSystemPartition(
-    void
-    );
-
-static
-STATUS
-_IomuInitializeSwapFile(
     void
     );
 
@@ -376,6 +366,7 @@ IomuAckInterrupt(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _IomuSetupRtc(
     OUT_OPT     QWORD*          TscFrequency
@@ -409,6 +400,7 @@ _IomuSetupRtc(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _IomuSetupPit(
     IN          DWORD           TimerPeriodUs,
@@ -528,16 +520,6 @@ IomuLateInit(
         LOGL("Successfully determined system partition!\n");
     }
 
-    status = _IomuInitializeSwapFile();
-    if (!SUCCEEDED(status))
-    {
-        LOG_FUNC_ERROR("_IomuInitializeSwapFile", status);
-    }
-    else
-    {
-        LOGL("Successfully determined swap partition!\n");
-    }
-
     return STATUS_SUCCESS;
 }
 
@@ -547,14 +529,6 @@ IomuGetSystemPartitionPath(
     )
 {
     return m_iomuData.SystemDrive;
-}
-
-PFILE_OBJECT
-IomuGetSwapFile(
-    void
-    )
-{
-    return m_iomuData.SwapFile;
 }
 
 PDRIVER_OBJECT
@@ -602,6 +576,7 @@ IomuGetPciDeviceList(
     return &m_iomuData.PciDeviceList;
 }
 
+SAL_SUCCESS
 STATUS
 IomuGetDevicesByType(
     IN_RANGE_UPPER(DeviceTypeMax)
@@ -698,7 +673,7 @@ IomuNewVpbCreated(
 
     Vpb->VolumeLetter = _IomuGetNextVolumeLetter();
 
-    InsertOrderedList(&m_iomuData.VpbList, &Vpb->NextVpb, _VpbCompareFunction, NULL);
+    InsertTailList(&m_iomuData.VpbList, &Vpb->NextVpb);
 }
 
 void
@@ -731,7 +706,7 @@ IomuSearchForVpb(
     // take volume letter
     vpbToSearchFor.VolumeLetter = DriveLetter;
 
-    pCorrespondingVpb = ListSearchForElement(&m_iomuData.VpbList, &vpbToSearchFor.NextVpb, TRUE, _VpbCompareFunction, NULL);
+    pCorrespondingVpb = ListSearchForElement(&m_iomuData.VpbList, &vpbToSearchFor.NextVpb, _VpbCompareFunction);
     if (NULL == pCorrespondingVpb)
     {
         return NULL;
@@ -1065,8 +1040,7 @@ static
 INT64
 (__cdecl _VpbCompareFunction) (
     IN      PLIST_ENTRY     FirstElem,
-    IN      PLIST_ENTRY     SecondElem,
-    IN_OPT  PVOID           Context
+    IN      PLIST_ENTRY     SecondElem
     )
 {
     PVPB pFirstVpb;
@@ -1074,7 +1048,6 @@ INT64
 
     ASSERT(NULL != FirstElem);
     ASSERT(NULL != SecondElem);
-    ASSERT(Context == NULL);
 
     pFirstVpb = CONTAINING_RECORD(FirstElem, VPB, NextVpb);
     pSecondVpb = CONTAINING_RECORD(SecondElem, VPB, NextVpb);
@@ -1223,56 +1196,6 @@ _IomuDetermineSystemPartition(
     }
 
     return bFoundSystemPartition ? STATUS_SUCCESS : STATUS_FILE_NOT_FOUND;
-}
-
-static
-STATUS
-_IomuInitializeSwapFile(
-    void
-    )
-{
-    STATUS status;
-    BOOLEAN bOpenedSwapFile;
-
-    status = STATUS_SUCCESS;
-    bOpenedSwapFile = FALSE;
-
-    for (PLIST_ENTRY pListEntry = m_iomuData.VpbList.Flink;
-         pListEntry != &m_iomuData.VpbList;
-         pListEntry = pListEntry->Flink)
-    {
-        PVPB pVpb = CONTAINING_RECORD(pListEntry, VPB, NextVpb);
-        char swapFilePath[4];
-
-        // if the FS is not mounted => we do not recognize it
-        if (!pVpb->Flags.Mounted)
-        {
-            continue;
-        }
-
-        // we only care about swap partitions
-        if (!pVpb->Flags.SwapSpace)
-        {
-            continue;
-        }
-
-        status = snprintf(swapFilePath, sizeof(swapFilePath), "%c:\\", pVpb->VolumeLetter);
-        ASSERT(SUCCEEDED(status));
-
-        status = IoCreateFile(&m_iomuData.SwapFile,
-                              swapFilePath,
-                              FALSE,
-                              FALSE,
-                              FALSE);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("IoCreateFile", status);
-            continue;
-        }
-        bOpenedSwapFile = TRUE;
-    }
-
-    return bOpenedSwapFile ? STATUS_SUCCESS : STATUS_FILE_NOT_FOUND;
 }
 
 static

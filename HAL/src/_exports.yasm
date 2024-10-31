@@ -4,7 +4,6 @@ global __ltr
 global __sgdt
 global __reloadGDT
 global __changeStack
-global __HALreadfsqword
 
 align 0x10, db 0
 [BITS 64]
@@ -100,10 +99,4 @@ __changeStack:
 
     cld
 
-    ret
-
-align 0x10, db 0
-[bits 64]
-__HALreadfsqword:
-    mov rax, [fs:ecx]
     ret

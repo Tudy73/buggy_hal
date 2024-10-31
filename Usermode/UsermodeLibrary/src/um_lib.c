@@ -2,6 +2,8 @@
 
 #define RFLAGS_DIRECTION_BIT            ((QWORD)1<<10)
 
+#define SYSCALL_IF_VERSION_UM           0x1
+
 extern
 STATUS
 __main(
@@ -42,7 +44,7 @@ __start(
         CHECK_STACK_ALIGNMENT;
 
         // Validate syscall interface
-        status = SyscallValidateInterface(SYSCALL_IMPLEMENTED_IF_VERSION);
+        status = SyscallValidateInterface(SYSCALL_IF_VERSION_UM);
         if (!SUCCEEDED(status))
         {
             __leave;

@@ -53,6 +53,7 @@ _ThreadSystemGetNextTid(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _ThreadInit(
     IN_Z        char*               Name,
@@ -79,9 +80,6 @@ _ThreadSetupMainThreadUserStack(
     IN      PPROCESS            Process
     );
 
-
-REQUIRES_EXCL_LOCK(m_threadSystemData.ReadyThreadsLock)
-RELEASES_EXCL_AND_NON_REENTRANT_LOCK(m_threadSystemData.ReadyThreadsLock)
 static
 void
 _ThreadSchedule(
@@ -166,6 +164,8 @@ ThreadSystemInitMainForCurrentCPU(
     pProcess = ProcessRetrieveSystemProcess();
 
     ASSERT( NULL != pCpu );
+
+    memzero(mainThreadName, MAX_PATH + 1);
 
     snprintf( mainThreadName, MAX_PATH, "%s-%02x", "main", pCpu->ApicId );
 
@@ -452,11 +452,9 @@ ThreadYield(
     void
     )
 {
-    INTR_STATE dummyState;
     INTR_STATE oldState;
     PTHREAD pThread = GetCurrentThread();
     PPCPU pCpu;
-    BOOLEAN bForcedYield;
 
     ASSERT( NULL != pThread);
 
@@ -466,7 +464,6 @@ ThreadYield(
 
     ASSERT( NULL != pCpu );
 
-    bForcedYield = pCpu->ThreadData.YieldOnInterruptReturn;
     pCpu->ThreadData.YieldOnInterruptReturn = FALSE;
 
     if (THREAD_FLAG_FORCE_TERMINATE_PENDING == _InterlockedAnd(&pThread->Flags, MAX_DWORD))
@@ -475,18 +472,9 @@ ThreadYield(
         NOT_REACHED;
     }
 
-    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
-    if (pThread != pCpu->ThreadData.IdleThread)
-    {
-        InsertTailList(&m_threadSystemData.ReadyThreadsList, &pThread->ReadyList);
-    }
-    if (!bForcedYield)
-    {
-        pThread->TickCountEarly++;
-    }
+    pThread->TickCountEarly++;
     pThread->State = ThreadStateReady;
     _ThreadSchedule();
-    ASSERT( !LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
     LOG_TRACE_THREAD("Returned from _ThreadSchedule\n");
 
     CpuIntrSetState(oldState);
@@ -497,7 +485,6 @@ ThreadBlock(
     void
     )
 {
-    INTR_STATE oldState;
     PTHREAD pCurrentThread;
 
     pCurrentThread = GetCurrentThread();
@@ -513,9 +500,7 @@ ThreadBlock(
 
     pCurrentThread->TickCountEarly++;
     pCurrentThread->State = ThreadStateBlocked;
-    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
     _ThreadSchedule();
-    ASSERT( !LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
 }
 
 void
@@ -532,9 +517,10 @@ ThreadUnblock(
 
     ASSERT(ThreadStateBlocked == Thread->State);
 
+    Thread->State = ThreadStateReady;
+
     LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
     InsertTailList(&m_threadSystemData.ReadyThreadsList, &Thread->ReadyList);
-    Thread->State = ThreadStateReady;
     LockRelease(&m_threadSystemData.ReadyThreadsLock, dummyState );
     LockRelease(&Thread->BlockLock, oldState);
 }
@@ -553,6 +539,10 @@ ThreadExit(
 
     CpuIntrDisable();
 
+    LockAcquire(&m_threadSystemData.AllThreadsLock, &oldState);
+    RemoveEntryList(&pThread->AllList);
+    LockRelease(&m_threadSystemData.AllThreadsLock, oldState);
+
     if (LockIsOwner(&pThread->BlockLock))
     {
         LockRelease(&pThread->BlockLock, INTR_OFF);
@@ -564,7 +554,6 @@ ThreadExit(
 
     ProcessNotifyThreadTermination(pThread);
 
-    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
     _ThreadSchedule();
     NOT_REACHED;
 }
@@ -583,6 +572,8 @@ ThreadTakeBlockLock(
     )
 {
     INTR_STATE dummyState;
+
+    ASSERT(CpuIntrGetState() == INTR_OFF);
 
     LockAcquire(&GetCurrentThread()->BlockLock, &dummyState);
 }
@@ -628,9 +619,9 @@ ThreadGetName(
     IN_OPT  PTHREAD             Thread
     )
 {
-    PTHREAD pThread = (NULL != Thread) ? Thread : GetCurrentThread();
+    PTHREAD pThread = Thread;
 
-    return (NULL != pThread) ? pThread->Name : "";
+    return pThread->Name;
 }
 
 TID
@@ -702,8 +693,8 @@ SetCurrentThread(
     pCpu = GetCurrentPcpu();
     ASSERT(pCpu != NULL);
 
-    pCpu->ThreadData.CurrentThread = Thread->Self;
-    if (NULL != Thread->Self)
+    pCpu->ThreadData.CurrentThread = Thread;
+    if (NULL != Thread)
     {
         pCpu->StackTop = Thread->InitialStackBase;
         pCpu->StackSize = Thread->StackSize;
@@ -712,6 +703,7 @@ SetCurrentThread(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _ThreadInit(
     IN_Z        char*               Name,
@@ -747,6 +739,7 @@ _ThreadInit(
             status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
             __leave;
         }
+        memzero(pThread, sizeof(THREAD) * 2);
 
         RfcPreInit(&pThread->RefCnt);
 
@@ -756,8 +749,6 @@ _ThreadInit(
             LOG_FUNC_ERROR("RfcInit", status);
             __leave;
         }
-
-        pThread->Self = pThread;
 
         status = ExEventInit(&pThread->TerminationEvt, ExEventTypeNotification, FALSE);
         if (!SUCCEEDED(status))
@@ -858,7 +849,7 @@ _ThreadSetupInitialState(
 {
     STATUS status;
     PVOID* pStack;
-    PCOMPLETE_PROCESSOR_STATE pState;
+    PPROCESSOR_STATE pState;
     PINTERRUPT_STACK pIst;
 
     ASSERT( NULL != Thread );
@@ -900,12 +891,12 @@ _ThreadSetupInitialState(
 #pragma warning(suppress:4054)
     *pStack = (PVOID) ThreadStart;
 
-    pStack = (PVOID*) PtrDiff(pStack, sizeof(COMPLETE_PROCESSOR_STATE));
-    pState = (PCOMPLETE_PROCESSOR_STATE) pStack;
+    pStack = (PVOID*) PtrDiff(pStack, sizeof(PROCESSOR_STATE));
+    pState = (PPROCESSOR_STATE) pStack;
 
-    memzero(pState, sizeof(COMPLETE_PROCESSOR_STATE));
-    pState->RegisterArea.RegisterValues[RegisterRcx] = FirstArgument;
-    pState->RegisterArea.RegisterValues[RegisterRdx] = SecondArgument;
+    memzero(pState, sizeof(PROCESSOR_STATE));
+    pState->RegisterValues[RegisterRcx] = FirstArgument;
+    pState->RegisterValues[RegisterRdx] = SecondArgument;
 
     Thread->Stack = pStack;
 
@@ -955,8 +946,6 @@ _ThreadSetupMainThreadUserStack(
     return STATUS_SUCCESS;
 }
 
-REQUIRES_EXCL_LOCK(m_threadSystemData.ReadyThreadsLock)
-RELEASES_EXCL_AND_NON_REENTRANT_LOCK(m_threadSystemData.ReadyThreadsLock)
 static
 void
 _ThreadSchedule(
@@ -965,22 +954,52 @@ _ThreadSchedule(
 {
     PTHREAD pCurrentThread;
     PTHREAD pNextThread;
+    INTR_STATE dummyState;
     PCPU* pCpu;
 
     ASSERT(INTR_OFF == CpuIntrGetState());
-    ASSERT(LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
 
     pCurrentThread = GetCurrentThread();
     ASSERT( NULL != pCurrentThread );
 
+    pNextThread = NULL;
+
     pCpu = GetCurrentPcpu();
 
-    // save previous thread
+    // The current thread will be the previous thread which executed on this CPU, regardless of
+    // the fact that it will continue execution or not. In case the thread took the block lock
+    // it still has to be released in ThreadCleanupPostSchedule regardless if it is still running
+    // or not
     pCpu->ThreadData.PreviousThread = pCurrentThread;
+
+    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
 
     // get next thread
     pNextThread = _ThreadGetReadyThread();
     ASSERT( NULL != pNextThread );
+
+    // If the currently running thread is still ready to run (i.e. this function was not called to due an
+    // exit or block) check to see if the next scheduled thread is the idle thread or not, if it is so
+    // this thread will continue execution after the function returns.
+    if (pCurrentThread->State == ThreadStateReady)
+    {
+        if (pNextThread == pCpu->ThreadData.IdleThread)
+        {
+            // If the next thread on the ready list is the idle one re-schedule the
+            // one already running, there's no problem if its still the idle thread
+            pNextThread = pCurrentThread;
+
+            pCurrentThread->UninterruptedTicks++;
+        }
+        else if (pCurrentThread != pCpu->ThreadData.IdleThread)
+        {
+            // If the next thread to run is not the idle one and the current thread running
+            // is not the idle one as well then we can insert the thread in the ready list
+            InsertTailList(&m_threadSystemData.ReadyThreadsList, &pCurrentThread->ReadyList);
+
+            pCurrentThread->UninterruptedTicks = 0;
+        }
+    }
 
     // if current differs from next
     // => schedule next
@@ -992,14 +1011,12 @@ _ThreadSchedule(
 
         if (pCurrentThread->Process != pNextThread->Process)
         {
-            MmuChangeProcessSpace(pNextThread->Process);
+            ProcessActivatePagingTables(pNextThread->Process, FALSE);
         }
 
         // Before any thread is scheduled it executes this function, thus if we set the current
         // thread to be the next one it will be fine - there is no possibility of interrupts
         // appearing to cause inconsistencies
-        pCurrentThread->UninterruptedTicks = 0;
-
         SetCurrentThread(pNextThread);
         ThreadSwitch( &pCurrentThread->Stack, pNextThread->Stack);
 
@@ -1019,10 +1036,6 @@ _ThreadSchedule(
             LOG_TRACE_THREAD("Prev thread: %s\n", pCpu->ThreadData.PreviousThread->Name);
         }
     }
-    else
-    {
-        pCurrentThread->UninterruptedTicks++;
-    }
 
     ThreadCleanupPostSchedule();
 }
@@ -1038,10 +1051,15 @@ ThreadCleanupPostSchedule(
 
     ASSERT(INTR_OFF == CpuIntrGetState());
 
+    // We can only release the lock here because while the current thread is still running
+    // it may be scheduled on another CPU before we manage to perform the thread switch
+    // This must be done here, in the ThreadCleanuPostSchedule function because the lock
+    // must be released even when a new thread is started (creation does not go through
+    // _ThreadSchedule, only ThreadCleanupPostSchedule)
+    LockRelease(&m_threadSystemData.ReadyThreadsLock, INTR_OFF);
+
     GetCurrentPcpu()->ThreadData.RunningThreadTicks = 0;
     prevThread = GetCurrentPcpu()->ThreadData.PreviousThread;
-
-    LockRelease(&m_threadSystemData.ReadyThreadsLock, INTR_OFF);
 
     if (NULL != prevThread)
     {
@@ -1181,43 +1199,38 @@ _ThreadDestroy(
     IN_OPT  PVOID                   Context
     )
 {
-    INTR_STATE oldState;
-    PTHREAD pThread = (PTHREAD) CONTAINING_RECORD(Object, THREAD, RefCnt);
+    PTHREAD Thread = (PTHREAD) Object;
 
-    ASSERT(NULL != pThread);
+    ASSERT(NULL != Thread);
     ASSERT(NULL == Context);
-
-    LockAcquire(&m_threadSystemData.AllThreadsLock, &oldState);
-    RemoveEntryList(&pThread->AllList);
-    LockRelease(&m_threadSystemData.AllThreadsLock, oldState);
 
     // This must be done before removing the thread from the process list, else
     // this may be the last thread and the process VAS will be freed by the time
     // ProcessRemoveThreadFromList - this function also dereferences the process
-    if (NULL != pThread->UserStack)
+    if (NULL != Thread->UserStack)
     {
         // Free UM stack
-        MmuFreeStack(pThread->UserStack, pThread->Process);
-        pThread->UserStack = NULL;
+        MmuFreeStack(Thread->UserStack, Thread->Process);
+        Thread->UserStack = NULL;
     }
 
-    ProcessRemoveThreadFromList(pThread);
+    ProcessRemoveThreadFromList(Thread);
 
-    if (NULL != pThread->Name)
+    if (NULL != Thread->Name)
     {
-        ExFreePoolWithTag(pThread->Name, HEAP_THREAD_TAG);
-        pThread->Name = NULL;
+        ExFreePoolWithTag(Thread->Name, HEAP_THREAD_TAG);
+        Thread->Name = NULL;
     }
 
-    if (NULL != pThread->Stack)
+    if (NULL != Thread->Stack)
     {
         // This is the kernel mode stack
         // It does not 'belong' to any process => pass NULL
-        MmuFreeStack(pThread->Stack, NULL);
-        pThread->Stack = NULL;
+        MmuFreeStack(Thread->Stack, NULL);
+        Thread->Stack = NULL;
     }
 
-    ExFreePoolWithTag(pThread, HEAP_THREAD_TAG);
+    ExFreePoolWithTag(Thread, HEAP_THREAD_TAG);
 }
 
 static

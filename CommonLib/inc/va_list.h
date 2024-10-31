@@ -1,10 +1,6 @@
 #pragma once
 
-C_HEADER_START
-#ifndef _VA_LIST_DEFINED
-#define _VA_LIST_DEFINED
 typedef PBYTE               va_list;
-#endif
 
 #define STACKITEM_SIZE      sizeof(PVOID)
 
@@ -16,4 +12,3 @@ typedef PBYTE               va_list;
 // And increases the List pointer
 #define va_arg(List, Type)	\
 	((List) += STACKITEM_SIZE, *((Type *)((List) - STACKITEM_SIZE)))
-C_HEADER_END

@@ -6,9 +6,6 @@
 #include "synch.h"
 #include "ex_event.h"
 
-#define PROCESS_MAX_PHYSICAL_FRAMES     16
-#define PROCESS_MAX_OPEN_FILES          16
-
 typedef struct _PROCESS
 {
     REF_COUNT                       RefCnt;

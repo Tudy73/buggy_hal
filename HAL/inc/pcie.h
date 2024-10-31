@@ -9,6 +9,7 @@ typedef struct _PCI_ROOT_COMPLEX
     BYTE            EndBusNumber;
 } PCI_ROOT_COMPLEX, *PPCI_ROOT_COMPLEX;
 
+SAL_SUCCESS
 STATUS
 PciExpressRetrieveNextDevice(
     IN      PPCI_ROOT_COMPLEX           PciRootComplex,

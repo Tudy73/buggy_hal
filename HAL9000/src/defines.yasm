@@ -175,6 +175,4 @@
 %define     BIOS_SERIAL_PORT_ADDRESS    0x400
 %define     BIOS_NO_OF_SERIAL_PORTS     4
 
-%define     INCLUDE_FP_SUPPORT          0
-
 %endif ; _DEFINES_ASM_

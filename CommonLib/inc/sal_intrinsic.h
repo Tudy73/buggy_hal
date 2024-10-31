@@ -1,18 +1,6 @@
 #pragma once
 
-C_HEADER_START
-#ifndef CL_NON_NATIVE
-#pragma warning(push)
-
-// warning C4391: incorrect return type for intrinsic function
-#pragma warning(disable:4391)
-
 // annotations for some intrinsics
-PVOID
-_AddressOfReturnAddress(
-    void
-    );
-
 void
 __cpuid(
     OUT_WRITES_ALL(4)    int cpuInfo[4],
@@ -49,17 +37,12 @@ __movsq(
 _Success_(return == 0)
 VMX_RESULT
 __vmx_vmread(
-    IN   DWORD  Field,
+    IN   QWORD  Field,
     OUT  QWORD* FieldValue
     );
 
-_Success_(return == 0)
-VMX_RESULT
-__vmx_vmwrite(
-    IN   DWORD  Field,
-    IN   QWORD  FieldValue
-    );
-
+// warning C4391: incorrect return type for intrinsic function
+#pragma warning(disable:4391)
 PVOID
 __readcr2(
     void
@@ -83,7 +66,7 @@ __writecr8(
 
 BYTE
 _InterlockedExchange8(
-    INOUT _Interlocked_operand_
+    INOUT _Interlocked_operand_ 
         BYTE volatile * _Target,
     IN  BYTE _Value
     );
@@ -95,9 +78,9 @@ _InterlockedIncrement(
 
 BYTE
 _InterlockedCompareExchange8(
-    INOUT _Interlocked_operand_
-        BYTE volatile * _Destination,
-    IN  BYTE _Exchange,
+    INOUT _Interlocked_operand_ 
+        BYTE volatile * _Destination, 
+    IN  BYTE _Exchange, 
     IN  BYTE _Comparand
     );
 
@@ -107,15 +90,15 @@ _InterlockedDecrement16(
     );
 
 DWORD _InterlockedCompareExchange(
-    INOUT _Interlocked_operand_
-        DWORD volatile * _Destination,
+    INOUT _Interlocked_operand_ 
+        DWORD volatile * _Destination, 
     IN  DWORD _Exchange,
     IN  DWORD _Comparand
     );
 
 WORD
 _InterlockedCompareExchange16(
-    INOUT _Interlocked_operand_
+    INOUT _Interlocked_operand_ 
         WORD volatile *Destination,
     IN  WORD ExChange,
     IN  WORD Comperand
@@ -123,7 +106,7 @@ _InterlockedCompareExchange16(
 
 WORD
 _InterlockedOr16(
-    INOUT _Interlocked_operand_
+    INOUT _Interlocked_operand_ 
         WORD volatile *Destination,
     IN  WORD Value
     );
@@ -133,29 +116,8 @@ _InterlockedIncrement16(
     INOUT _Interlocked_operand_ WORD volatile *Destination
     );
 
-DWORD
+DWORD 
 _InterlockedDecrement(
     INOUT _Interlocked_operand_ DWORD volatile * _Addend
     );
-
-_Success_(return == TRUE)
-BOOLEAN
-_rdrand16_step(
-    OUT WORD*       Value
-    );
-
-_Success_(return == TRUE)
-BOOLEAN
-_rdrand32_step(
-    OUT DWORD*      Value
-    );
-
-_Success_(return == TRUE)
-BOOLEAN
-_rdrand64_step(
-    OUT QWORD*      Value
-    );
-
-#pragma warning(pop)
-#endif // CL_NON_NATIVE
-C_HEADER_END
+#pragma warning(default:4391)

@@ -91,12 +91,14 @@ DispSetCursor(
     IN      COLOR               Color
     );
 
+SAL_SUCCESS
 STATUS
 DispStoreBuffer(
     OUT_WRITES_BYTES(Size)  PVOID               Buffer,
     IN                      DWORD               Size
     );
 
+SAL_SUCCESS
 STATUS
 DispRestoreBuffer(
     IN_READS_BYTES(Size)    PVOID               Buffer,

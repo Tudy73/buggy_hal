@@ -36,9 +36,6 @@
 #define PIT_COMM_ACCESS_LO_HI                               0x03
 
 #pragma pack(push,1)
-
-#pragma warning(push)
-
 // warning C4214: nonstandard extension used: bit field types other than int
 #pragma warning(disable:4214)
 
@@ -47,8 +44,8 @@
 
 typedef union _PIT_COMMAND_REGISTER
 {
-    struct
-    {
+    struct  
+    {    
         BYTE            BcdMode             :   1;
         BYTE            OperatingMode       :   3;
         BYTE            AccessMode          :   2;
@@ -58,7 +55,8 @@ typedef union _PIT_COMMAND_REGISTER
 } PIT_COMMAND_REGISTER, *PPIT_COMMAND_REGISTER;
 STATIC_ASSERT(sizeof(PIT_COMMAND_REGISTER) == sizeof(BYTE));
 
-#pragma warning(pop)
+#pragma warning(default:4201)
+#pragma warning(default:4214)
 #pragma pack(pop)
 
 static
@@ -81,6 +79,7 @@ PitSetTimer(
     IN      BOOLEAN     Periodic
     )
 {
+    BYTE value;
     DWORD initialCount;
 
     ASSERT( 0 != Microseconds && Microseconds <= SEC_IN_US);
@@ -88,13 +87,13 @@ PitSetTimer(
     initialCount = PIT_FREQUENCY_HZ / (SEC_IN_US / Microseconds);
     ASSERT( initialCount <= MAX_WORD);
 
-    if (!Periodic)
+    value = 0;
+    
+    // get current gate controls
+    value = __inbyte(PIT_CONTROL_REG_PORT);
+
+    if( !Periodic )
     {
-        BYTE value;
-
-        // get current gate controls
-        value = __inbyte(PIT_CONTROL_REG_PORT);
-
         // 0xFD is used to disable speaker output (bit #1)
         // bit0 enables channel 2
         __outbyte(PIT_CONTROL_REG_PORT, (value & (~PIT_CONTROL_SPEAKER_OUTPUT)) | PIT_CONTROL_CH2_INPUT);

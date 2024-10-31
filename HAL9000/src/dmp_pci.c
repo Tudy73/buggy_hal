@@ -61,7 +61,7 @@ DumpPciDevice(
         return;
     }
 
-    LOG("PCI device at (%d.%d.%d)\n",
+    LOG("PCI device at (%d.%d.%d)\n", 
         Device->DeviceLocation.Bus,
         Device->DeviceLocation.Device,
         Device->DeviceLocation.Function
@@ -83,8 +83,8 @@ _DumpPciHeader(
 
     ASSERT( NULL != Header );
 
-    LOG("Vendor ID: 0x%04x\n", Header->VendorID);
-    LOG("Device ID: 0x%04x\n", Header->DeviceID);
+    LOG("Vendor ID: 0x%x\n", Header->VendorID);
+    LOG("Device ID: 0x%x\n", Header->DeviceID);
     LOG("Class Code: 0x%x\n", Header->ClassCode);
     LOG("Subclass: 0x%x\n", Header->Subclass);
     LOG("Header type: 0x%x\n", Header->HeaderType );
@@ -92,8 +92,8 @@ _DumpPciHeader(
 
     bBridge = Header->HeaderType.Layout == PCI_HEADER_LAYOUT_PCI_TO_PCI;
 
-    for (DWORD i = 0;
-         i < (bBridge ? PCI_BRIDGE_NO_OF_BARS : PCI_DEVICE_NO_OF_BARS);
+    for (DWORD i = 0; 
+         i < (bBridge ? PCI_BRIDGE_NO_OF_BARS : PCI_DEVICE_NO_OF_BARS); 
          ++i)
     {
         LOG("Bar[%d] = 0x%x\n", i, Header->Device.Bar[i]);

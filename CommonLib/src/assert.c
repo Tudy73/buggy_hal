@@ -52,7 +52,7 @@ AssertInfo(
     {
         m_pAssertFunction(m_assertBuffer);
     }
-
+    
 #ifndef _COMMONLIB_NO_LOCKS_
     LockRelease(&m_assertLock, oldState );
 #endif // _COMMONLIB_NO_LOCKS_
@@ -88,8 +88,6 @@ AssertFreeLock(
     void
     )
 {
-    _Analysis_assume_lock_acquired_(m_assertLock);
-
     LockRelease(&m_assertLock, INTR_OFF );
 }
 #endif // _COMMONLIB_NO_LOCKS_

@@ -29,9 +29,6 @@ extern void LowGdtTable();
 extern void LowGdtTableEnd();
 
 #pragma pack(push,1)
-
-#pragma warning(push)
-
 // warning C4200: nonstandard extension used: zero-sized array in struct/union
 #pragma warning(disable:4200)
 
@@ -60,9 +57,10 @@ typedef struct _LOW_MEMORY_CONFIG
     SYSTEM_CONFIG       SystemConfig;
     AP_CONFIG_ENTRY     ApConfig[0];
 } LOW_MEMORY_CONFIG, *PLOW_MEMORY_CONFIG;
-#pragma warning(pop)
+#pragma warning(default:4200)
 #pragma pack(pop)
 
+SAL_SUCCESS
 STATUS
 ApTrampSetupLowerMemory(
     IN      PLIST_ENTRY     CpuList,
@@ -253,21 +251,10 @@ ApInitCpu(
 
     CHECK_STACK_ALIGNMENT;
 
-    status = STATUS_SUCCESS;
-
     LOGPL("Hello C!, CPU at: 0x%X\n", Cpu);
 
     // we need to reload GDT with new one
-    GdtMuReload(GdtMuGetCS64Supervisor(), GdtMuGetDS64Supervisor(), FALSE, FALSE);
-
-    __try
-    {
-        status = CpuMuActivateFpuFeatures();
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("CpuMuActivateFpuFeatures", status);
-            __leave;
-        }
+    GdtReload(GdtMuGetCS64Supervisor(), GdtMuGetDS64Supervisor());
 
     // reload IDT
     IdtReload();
@@ -276,7 +263,7 @@ ApInitCpu(
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("CpuMuInitCpu", status );
-            __leave;
+        NOT_REACHED;
     }
 
     MmuActivateProcessIds();
@@ -285,14 +272,10 @@ ApInitCpu(
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("ThreadSystemInitIdleForCurrentCPU", status);
-            __leave;
+        NOT_REACHED;
     }
 
     // exit main thread
     ThreadExit(STATUS_SUCCESS);
-    }
-    __finally
-    {
     NOT_REACHED;
-    }
 }

@@ -168,6 +168,9 @@
     <ClCompile Include="src\dmp_cmos.c">
       <Filter>Source Files\debug\dump</Filter>
     </ClCompile>
+    <ClCompile Include="src\heap.c">
+      <Filter>Source Files\crt</Filter>
+    </ClCompile>
     <ClCompile Include="src\dmp_multiboot.c">
       <Filter>Source Files\debug\dump</Filter>
     </ClCompile>
@@ -190,6 +193,9 @@
       <Filter>Source Files\base</Filter>
     </ClCompile>
     <ClCompile Include="src\test_common.c">
+      <Filter>Source Files\debug\test</Filter>
+    </ClCompile>
+    <ClCompile Include="src\test_heap.c">
       <Filter>Source Files\debug\test</Filter>
     </ClCompile>
     <ClCompile Include="src\cpumu.c">
@@ -443,6 +449,9 @@
     <ClInclude Include="headers\test_common.h">
       <Filter>Header Files\debug\test</Filter>
     </ClInclude>
+    <ClInclude Include="headers\test_heap.h">
+      <Filter>Header Files\debug\test</Filter>
+    </ClInclude>
     <ClInclude Include="headers\cpumu.h">
       <Filter>Header Files\core\cpu</Filter>
     </ClInclude>
@@ -670,6 +679,9 @@
     </ClInclude>
     <ClInclude Include="..\shared\kernel\filesystem.h">
       <Filter>Header Files\devices\abstraction</Filter>
+    </ClInclude>
+    <ClInclude Include="..\shared\kernel\heap.h">
+      <Filter>Header Files\crt</Filter>
     </ClInclude>
     <ClInclude Include="..\shared\kernel\heap_tags.h">
       <Filter>Header Files\crt</Filter>

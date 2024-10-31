@@ -11,6 +11,7 @@ static const DWORD TST_PMM_ALLOCATION_FRAMES[] =
 static const DWORD TST_PMM_NO_OF_SIZES = ARRAYSIZE(TST_PMM_ALLOCATION_FRAMES);
 
 static
+SAL_SUCCESS
 STATUS
 _TstPmmReservationAndRelease(
     IN          DWORD               NoOfFrames,
@@ -46,6 +47,7 @@ TestPmmReserveAndReleaseFunctions(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _TstPmmReservationAndRelease(
     IN          DWORD               NoOfFrames,

@@ -60,7 +60,7 @@ static
 STATUS
 _NetworkPortInitializeMiniportBuffers(
     IN      PMINIPORT_BUFFER_DESCRIPTION                    BufferDescription,
-    OUT_WRITES_ALL(BufferDescription->NumberOfBuffers)
+    OUT_WRITES_ALL(BufferDescription->NumberOfBuffers)      
             PHYSICAL_ADDRESS*                               PhysicalAddresses,
     OUT_PTR PVOID**                                         BufferArray,
     OUT_PTR PVOID*                                          DescriptorArray
@@ -374,7 +374,7 @@ _NetworkPortConfigureDevice(
 
         initialization.TxBuffers.NumberOfBuffers = MiniportRegistration->TxBuffers.NumberOfBuffers;
         initialization.TxBuffers.Buffers = TxPhysicalAddresses;
-        initialization.TxBuffers.BufferSize = MiniportRegistration->TxBuffers.BufferSize;
+        initialization.TxBuffers.BufferSize = MiniportRegistration->RxBuffers.BufferSize;
 
         // initialize miniport device
         status = MiniportRegistration->MiniportFunctions.MiniportInitializeDevice(pMiniportDevice,
@@ -483,7 +483,7 @@ static
 STATUS
 _NetworkPortInitializeMiniportBuffers(
     IN      PMINIPORT_BUFFER_DESCRIPTION                    BufferDescription,
-    OUT_WRITES_ALL(BufferDescription->NumberOfBuffers)
+    OUT_WRITES_ALL(BufferDescription->NumberOfBuffers)      
             PHYSICAL_ADDRESS*                               PhysicalAddresses,
     OUT_PTR PVOID**                                         BufferArray,
     OUT_PTR PVOID*                                          DescriptorArray
@@ -545,17 +545,17 @@ _NetworkPortInitializeMiniportBuffers(
                 descriptorArray = NULL;
             }
 
+            for (i = 0; i < BufferDescription->NumberOfBuffers; ++i)
+            {
+                if (NULL != bufferArray[i])
+                {
+                    IoFreeContinuousMemory(bufferArray[i]);
+                    bufferArray[i] = NULL;
+                }
+            }
+
             if (NULL != bufferArray)
             {
-                for (i = 0; i < BufferDescription->NumberOfBuffers; ++i)
-                {
-                    if (NULL != bufferArray[i])
-                    {
-                        IoFreeContinuousMemory(bufferArray[i]);
-                        bufferArray[i] = NULL;
-                    }
-                }
-
                 ExFreePoolWithTag(bufferArray, HEAP_PORT_TAG);
                 bufferArray = NULL;
             }

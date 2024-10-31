@@ -7,14 +7,11 @@
 #define NO_OF_IST               7
 
 #pragma pack(push,1)
-
-#pragma warning(push)
-
 //warning C4214: nonstandard extension used : bit field types other than int
 #pragma warning(disable:4214)
 
 // 7.7, Vol 3, No. 56
-typedef struct _TSS
+typedef struct _TSS 
 {
     DWORD           Reserved0;
 
@@ -84,7 +81,7 @@ typedef struct _TSS_DESCRIPTOR
 
 } TSS_DESCRIPTOR, *PTSS_DESCRIPTOR;
 STATIC_ASSERT(sizeof(TSS_DESCRIPTOR) == PREDEFINED_TSS_DESC_SIZE);
-#pragma warning(pop)
+#pragma warning(default:4214)
 #pragma pack(pop)
 
 //******************************************************************************
@@ -97,6 +94,7 @@ STATIC_ASSERT(sizeof(TSS_DESCRIPTOR) == PREDEFINED_TSS_DESC_SIZE);
 // Parameter:    IN PVOID StackBase - Stack to use in TSS
 // Parameter:    IN BYTE StackIndex - Index to use for stack
 //******************************************************************************
+SAL_SUCCESS
 STATUS
 TssInstall(
     OUT     PTSS        Tss,

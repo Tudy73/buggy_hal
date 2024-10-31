@@ -126,10 +126,10 @@ STATUS
 SyscallProcessCreate(
     IN_READS_Z(PathLength)
                 char*               ProcessPath,
-    IN          QWORD               PathLength,
+    IN          DWORD               PathLength,
     IN_READS_OPT_Z(ArgLength)
                 char*               Arguments,
-    IN          QWORD               ArgLength,
+    IN          DWORD               ArgLength,
     OUT         UM_HANDLE*          ProcessHandle
     );
 
@@ -177,44 +177,16 @@ SyscallProcessCloseHandle(
     );
 
 // SyscallIdVirtualAlloc
-//******************************************************************************
-// Function:     SyscallVirtualAlloc
-// Description:  Allocates a virtual address range, this can be used for mapping
-//               a file in memory by specifying a valid FileHandle. When Key is
-//               non-zero this creates or accesses an already existing shared
-//               memory range.
-// Returns:      STATUS
-// Parameter:    IN_OPT PVOID BaseAddress - Provides a hint on where to place
-//                                          the virtual allocation.
-// Parameter:    IN QWORD Size
-// Parameter:    IN VMM_ALLOC_TYPE AllocType
-// Parameter:    IN PAGE_RIGHTS PageRights
-// Parameter:    IN_OPT UM_HANDLE FileHandle - When non-NULL the range will be
-//                                             backed up by a file.
-// Parameter:    IN_OPT QWORD Key - When non-zero creates or accesses a system
-//                                  wide shared memory region.
-// Parameter:    OUT PVOID* AllocatedAddress - The virtual address allocated
-//******************************************************************************
 STATUS
 SyscallVirtualAlloc(
     IN_OPT      PVOID                   BaseAddress,
     IN          QWORD                   Size,
     IN          VMM_ALLOC_TYPE          AllocType,
     IN          PAGE_RIGHTS             PageRights,
-    IN_OPT      UM_HANDLE               FileHandle,
-    IN_OPT      QWORD                   Key,
-    OUT         PVOID*                  AllocatedAddress
+    IN_OPT      UM_HANDLE               FileHandle
     );
 
 // SyscallIdVirtualFree
-//******************************************************************************
-// Function:     SyscallVirtualFree
-// Description:  Frees a previously allocated virtual address range.
-// Returns:      STATUS
-// Parameter:    IN PVOID Address
-// Parameter:    QWORD Size
-// Parameter:    IN VMM_FREE_TYPE FreeType
-//******************************************************************************
 STATUS
 SyscallVirtualFree(
     IN          PVOID                   Address,
@@ -249,7 +221,7 @@ STATUS
 SyscallFileCreate(
     IN_READS_Z(PathLength)
                 char*                   Path,
-    IN          QWORD                   PathLength,
+    IN          DWORD                   PathLength,
     IN          BOOLEAN                 Directory,
     IN          BOOLEAN                 Create,
     OUT         UM_HANDLE*              FileHandle

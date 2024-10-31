@@ -38,8 +38,7 @@ typedef struct _FILE_OBJECT
 typedef struct _VPB_FLAGS
 {
     DWORD               Mounted     :    1;
-    DWORD               SwapSpace   :    1;
-    DWORD               Reserved    :   30;
+    DWORD               Reserved    :   31;
 } VPB_FLAGS, *PVPB_FLAGS;
 
 // Provides an association between a logical volume

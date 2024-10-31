@@ -18,6 +18,7 @@ static const char* STAT_NAMES[2] = { "SYNCHRONOUS", "ASYNCHRONOUS" };
 #define FILE_TEST_PERFORMANCE_NO_OF_ITERATIONS          5
 
 static
+SAL_SUCCESS
 STATUS
 _TestSingleFileRead(
     IN      PFILE_OBJECT        File,
@@ -27,6 +28,7 @@ _TestSingleFileRead(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _TestFileRead(
     IN_Z    char*               Filename,
@@ -289,7 +291,7 @@ TestFileReadPerformance(
                 // when reading the buffers
                 MmuProbeMemory(pBuffer, allocationSize);
 
-                memzero(&perfStats, sizeof(perfStats));
+                memzero(&perfStats, sizeof(PERFORMANCE_STATS));
                 LogSetState(FALSE);
                 for (async = 0; async < 2; ++async)
                 {
@@ -326,6 +328,7 @@ TestFileReadPerformance(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _TestSingleFileRead(
     IN      PFILE_OBJECT        File,
@@ -372,6 +375,7 @@ _TestSingleFileRead(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _TestFileRead(
     IN_Z    char*               Filename,

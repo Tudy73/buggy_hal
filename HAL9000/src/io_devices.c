@@ -23,6 +23,7 @@ _IoIsValidDeviceType(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _IoReadWriteDevice(
     IN          PDEVICE_OBJECT          DeviceObject,
@@ -87,8 +88,6 @@ IoCreateDevice(
         }
 
         pDevice->StackSize = 1;
-
-        MutexInit(&pDevice->DeviceLock, FALSE);
 
         // insert device into list
         /// TODO: need to lock
@@ -161,6 +160,14 @@ IoDeleteDevice(
 
     ExFreePoolWithTag(Device, HEAP_DEVICE_TAG);
     Device = NULL;
+}
+
+void
+IoRegisterFileSystem(
+    IN      PDEVICE_OBJECT      FileSystemDevice
+    )
+{
+    ASSERT(NULL != FileSystemDevice);
 }
 
 PTR_SUCCESS
@@ -354,6 +361,7 @@ IoCopyCurrentStackLocationToNext(
     memcpy(&Irp->StackLocations[currentStackLocation - 1], &Irp->StackLocations[currentStackLocation], sizeof(IO_STACK_LOCATION));
 }
 
+SAL_SUCCESS
 STATUS
 IoCallDriver(
     IN      PDEVICE_OBJECT  Device,
@@ -378,16 +386,16 @@ IoCallDriver(
 
     pStackLocation = IoGetCurrentIrpStackLocation(Irp);
 
-    if ((IRP_MJ_READ == pStackLocation->MajorFunction) || (IRP_MJ_WRITE == pStackLocation->MajorFunction))
+    if ((IRP_MJ_READ == pStackLocation->MajorFunction) || (IRP_MJ_WRITE == pStackLocation->MinorFunction))
     {
-        if (!IsAddressAligned(pStackLocation->Parameters.ReadWrite.Length, Device->DeviceAlignment))
+        if (!IsAddressAligned(pStackLocation->Parameters.ReadWrite.Length,Device->DeviceAlignment))
         {
             // read/write length not aligned to device requirement
             LOG_ERROR("ReadWrite length does not satisfy alignment requirement\nRequested: 0x%X, Required: 0x%x\n", pStackLocation->Parameters.ReadWrite.Length, Device->DeviceAlignment);
             return STATUS_DEVICE_ALIGNMENT_NO_SATISFIED;
         }
 
-        if (!IsAddressAligned(pStackLocation->Parameters.ReadWrite.Offset, Device->DeviceAlignment))
+        if (!IsAddressAligned(pStackLocation->Parameters.ReadWrite.Offset,Device->DeviceAlignment))
         {
             // read/write offset not aligned to device requirement
             LOG_ERROR("ReadWrite offset does not satisfy alignment requirement\nRequested: 0x%X, Required: 0x%x\n", pStackLocation->Parameters.ReadWrite.Offset, Device->DeviceAlignment);
@@ -405,9 +413,7 @@ IoCallDriver(
     }
     else
     {
-        MutexAcquire(&Device->DeviceLock);
         status = pDispatchFunction(Device, Irp);
-        MutexRelease(&Device->DeviceLock);
     }
     if (!SUCCEEDED(status))
     {
@@ -431,11 +437,12 @@ IoCompleteIrp(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _IoReadWriteDevice(
     IN          PDEVICE_OBJECT          DeviceObject,
-    _When_(!Write,OUT_WRITES_BYTES(*Length))
-    _When_(Write,IN_READS_BYTES(*Length))
+    _When_(Write,OUT_WRITES_BYTES(*Length))
+    _When_(!Write,IN_READS_BYTES(*Length))
                 PVOID                   Buffer,
     INOUT       QWORD*                  Length,
     IN          QWORD                   Offset,
@@ -519,6 +526,7 @@ _IoAllocateVpb(
     IomuNewVpbCreated(pVpb);
 }
 
+SAL_SUCCESS
 STATUS
 IoGetPciDevicesMatchingSpecification(
     IN          PCI_SPEC        Specification,
@@ -594,6 +602,7 @@ IoGetPciDevicesMatchingSpecification(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 IoGetPciDevicesMatchingLocation(
     IN          PCI_SPEC_LOCATION           Specification,
@@ -690,9 +699,6 @@ IoGetPciSecondaryBusForBridge(
     noOfDevices = 0;
     memzero(&pciLocation, sizeof(PCI_SPEC_LOCATION));
 
-    LOG_TRACE_IO("Will search for device at (%u.%u.%u)\n",
-        DeviceLocation.Bus, DeviceLocation.Device, DeviceLocation.Function);
-
     memcpy(&pciLocation.Location, (const PVOID) &DeviceLocation, sizeof(PCI_DEVICE_LOCATION));
     pciLocation.MatchBus = pciLocation.MatchDevice = pciLocation.MatchFunction = TRUE;
 
@@ -717,6 +723,7 @@ IoGetPciSecondaryBusForBridge(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 IoGetDevicesByType(
     IN                      DEVICE_TYPE         DeviceType,
@@ -750,17 +757,12 @@ IoFreeTemporaryData(
 
 PTR_SUCCESS
 PIRP
-// Warning C6101 Returning uninitialized memory '*OutputBuffer'. A successful path through
-// the function does not set the named _Out_ parameter.
-// I'm really not proud of this, but there is no other way to tell SAL what's going on
-// and Microsoft does the exact same hack... You learn from the best!
-#pragma warning(suppress: 6101)
 IoBuildDeviceIoControlRequest(
     IN          DWORD            IoControlCode,
     IN          PDEVICE_OBJECT   DeviceObject,
     IN_OPT      PVOID            InputBuffer,
     IN          DWORD            InputBufferLength,
-    OUT_OPT     PVOID            OutputBuffer,
+    IN_OPT      PVOID            OutputBuffer,
     IN          DWORD            OutputBufferLength
     )
 {
@@ -789,6 +791,7 @@ IoBuildDeviceIoControlRequest(
     return pIrp;
 }
 
+SAL_SUCCESS
 STATUS
 IoReadDeviceEx(
     IN                          PDEVICE_OBJECT          DeviceObject,
@@ -803,6 +806,7 @@ IoReadDeviceEx(
     return _IoReadWriteDevice(DeviceObject, Buffer, Length, Offset, FALSE, Asynchronous);
 }
 
+SAL_SUCCESS
 STATUS
 IoWriteDeviceEx(
     IN                          PDEVICE_OBJECT          DeviceObject,
@@ -817,6 +821,7 @@ IoWriteDeviceEx(
     return _IoReadWriteDevice(DeviceObject, Buffer, Length, Offset, TRUE, Asynchronous);
 }
 
+SAL_SUCCESS
 STATUS
 IoAllocateMdl(
     IN          PVOID           VirtualAddress,
@@ -907,6 +912,7 @@ IoMdlGetTranslationPair(
     return MdlGetTranslationPair(Mdl, Index);
 }
 
+SAL_SUCCESS
 STATUS
 IoRegisterInterruptEx(
     IN          PIO_INTERRUPT           Interrupt,

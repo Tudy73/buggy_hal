@@ -1,6 +1,5 @@
 #pragma once
 
-C_HEADER_START
 // most often used numbering bases
 #define BASE_TWO            2
 #define BASE_TEN            10
@@ -11,7 +10,6 @@ C_HEADER_START
 #define islower(c)          ( ( 'a' <= (c)) && ((c) <= 'z'))
 #define tolower(c)          ( (c) | LOWER_UPPER_DIFF)
 #define toupper(c)          ( (c) & (~LOWER_UPPER_DIFF))
-#define isspace(c)          ((' ' == (c)) || ('\t' == (c)) || ('\n' == (c)) || ('\r' == (c)))
 
 #define LOWER_UPPER_DIFF    ('a' - 'A')
 
@@ -26,13 +24,13 @@ C_HEADER_START
 // Parameter:     IN BOOLEAN signedValue - If set the value is signed, else unsigned
 // Parameter:     OUT char * buffer - Buffer in which to write the number
 // Parameter:     IN DWORD base - Numeric base of the input value
-// Parameter:     IN DWORD minimumDigits - The minimum number of digits to place
+// Parameter:     IN DWORD minimumDigits - The minimum number of digits to place 
 //                in the buffer
-// Parameter:     IN BOOLEAN is64BitValue - If set the value is treated as a 64bit
+// Parameter:     IN BOOLEAN is64BitValue - If set the value is treated as a 64bit 
 //                value
 //******************************************************************************
-void
-itoa(
+void 
+itoa( 
     IN      PVOID       valueAddress,
     IN      BOOLEAN     signedValue,
     OUT_Z   char*       buffer,
@@ -52,4 +50,3 @@ atoi(
 
 #define atoi32(addr,buf,base)       atoi((addr),(buf),(base),FALSE)
 #define atoi64(addr,buf,base)       atoi((addr),(buf),(base),TRUE)
-C_HEADER_END

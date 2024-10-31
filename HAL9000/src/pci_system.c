@@ -155,6 +155,7 @@ PciSystemInit(
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 PciSystemRetrieveDevices(
     INOUT   PLIST_ENTRY     PciDeviceList
@@ -243,6 +244,7 @@ PciSystemEstablishHierarchy(
     }
 }
 
+SAL_SUCCESS
 STATUS
 PciSystemFindDevicesMatchingSpecification(
     IN      PLIST_ENTRY     PciDeviceList,
@@ -304,6 +306,7 @@ PciSystemFindDevicesMatchingSpecification(
     return (0 != noOfDevicesFound) ? STATUS_SUCCESS : STATUS_ELEMENT_NOT_FOUND;
 }
 
+SAL_SUCCESS
 STATUS
 PciSystemFindDevicesMatchingLocation(
     IN      PLIST_ENTRY                 PciDeviceList,

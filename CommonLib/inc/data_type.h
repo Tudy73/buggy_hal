@@ -1,12 +1,5 @@
 #pragma once
 
-C_HEADER_START
-
-#pragma warning(push)
-
-// warning C4142: 'DWORD': benign redefinition of type
-#pragma warning(disable:4142)
-
 #ifndef TRUE
 #define TRUE                        ( 1 == 1 )
 #endif
@@ -52,21 +45,10 @@ typedef BYTE                BOOLEAN;
 // VMX operation
 typedef BYTE                VMX_RESULT;
 
-#ifndef CL_DO_NOT_DEFINE_PHYSICAL_ADDRESS
 // physical memory address
 typedef PVOID               PHYSICAL_ADDRESS;
-#endif // CL_DO_NOT_DEFINE_PHYSICAL_ADDRESS
 
 typedef volatile BYTE       VOL_BYTE;
 typedef volatile WORD       VOL_WORD;
 typedef volatile DWORD      VOL_DWORD;
 typedef volatile QWORD      VOL_QWORD;
-
-#ifndef _WCHAR_T_DEFINED
-typedef unsigned short WCHAR;
-#define _WCHAR_T_DEFINED
-#endif  /* _WCHAR_T_DEFINED */
-
-#pragma warning(pop)
-
-C_HEADER_END

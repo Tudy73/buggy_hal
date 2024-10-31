@@ -2,11 +2,13 @@
 
 #include "lapic.h"
 
+SAL_SUCCESS
 STATUS
 LapicSystemInit(
     void
     );
 
+SAL_SUCCESS
 STATUS
 LapicSystemInitializeCpu(
     IN      BYTE                            TimerInterruptVector
@@ -28,16 +30,8 @@ LapicSystemSendEOI(
     IN      BYTE                            Vector
     );
 
-//******************************************************************************
-// Function:     LapicSystemSetTimer
-// Description:  Enables the LAPIC timer on the current CPU to trigger every
-//               Microseconds ms. If the argument is 0 the timer is stopped.
-// Parameter:    IN DWORD Microseconds - Trigger period in microseconds.
-// Parameter:    OUT_PTR PTHREAD * Thread
-// NOTE:         This only programs the LAPIC timer on the current CPU.
-//******************************************************************************
 void
-LapicSystemSetTimer(
+LapicSystemEnableTimer(
     IN      DWORD                           Microseconds
     );
 

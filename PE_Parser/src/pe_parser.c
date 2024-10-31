@@ -2,6 +2,7 @@
 #include "pe_parser.h"
 #include "pe_structures.h"
 
+SAL_SUCCESS
 STATUS
 PeRetrieveNtHeader(
     IN_READS_BYTES(ImageSize)           PVOID                   ImageBase,
@@ -65,6 +66,7 @@ PeRetrieveNtHeader(
     return STATUS_SUCCESS;
 }
 
+SAL_SUCCESS
 STATUS
 PeRetrieveSection(
     IN                          PPE_NT_HEADER_INFO      NtInfo,
@@ -117,6 +119,7 @@ PeRetrieveSection(
     return STATUS_SUCCESS;
 }
 
+SAL_SUCCESS
 STATUS
 PeRetrieveDataDirectory(
     IN                          PPE_NT_HEADER_INFO      NtInfo,

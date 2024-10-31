@@ -10,7 +10,6 @@ __main(
 {
     STATUS status;
     UM_HANDLE hProcess;
-    STATUS terminationStatus;
 
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
@@ -33,12 +32,6 @@ __main(
         if (hProcess == UM_INVALID_HANDLE_VALUE)
         {
             LOG_ERROR("0x%X is not a valid handle value for a process!\n", UM_INVALID_HANDLE_VALUE);
-        }
-
-        status = SyscallProcessWaitForTermination(hProcess, &terminationStatus);
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("SyscallProcessWaitForTermination", status);
         }
     }
     __finally

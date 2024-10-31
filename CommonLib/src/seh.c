@@ -1,8 +1,3 @@
-#ifdef CL_NO_RUNTIME_CHECKS
-// warning C4206: nonstandard extension used: translation unit is empty
-#pragma warning(disable:4206)
-#else
-
 #include "common_lib.h"
 #include "seh.h"
 
@@ -23,4 +18,3 @@ __C_specific_handler(
 
     return ExceptionContinueExecution;
 }
-#endif // CL_NO_RUNTIME_CHECKS

@@ -4,33 +4,12 @@
 #include "mutex.h"
 #include "thread_internal.h"
 #include "pit.h"
-#include "checkin_queue.h"
-
-// warning C26165: Possibly failing to release lock '* pCtx->FirstMutex' in function '_ThreadChainer'.
-// Noone cares about these mutexes, noone uses them besides the tests => no deadlock
-#pragma warning(push)
-#pragma warning(disable:26165)
-
-typedef struct _TEST_PRIORITY_DONATION_MUTEX_CTX
-{
-    CHECKIN_QUEUE           SynchronizationContext;
-
-    MUTEX                   Mutex;
-} TEST_PRIORITY_DONATION_MUTEX_CTX, * PTEST_PRIORITY_DONATION_MUTEX_CTX;
 
 #define TEST_SLEEP_TILL_EXECUTION       (50*MS_IN_US)
-#define TEST_SLEEP_TIME_US              (1*MS_IN_US)
 
 static FUNC_ThreadStart _ThreadTakeMutex;
 static FUNC_ThreadStart _ThreadChainer;
 
-//******************************************************************************
-// Function:     _ThreadValidatePriority
-// Description:  Validates the priority of the current thread to match
-//               ExpectedPriority.
-// Returns:      BOOLEAN - TRUE if the priorities match, FALSE otherwise
-// Parameter:    IN THREAD_PRIORITY ExpectedPriority
-//******************************************************************************
 static
 __forceinline
 BOOLEAN
@@ -48,18 +27,6 @@ _ThreadValidatePriority(
     return TRUE;
 }
 
-//******************************************************************************
-// Function:     _SpawnThreadAndCheckPriority
-// Description:  Creates a new thread and validates that after the new thread
-//               was created the initial thread has priority Priority.
-// Returns:      STATUS
-// Parameter:    IN PFUNC_ThreadStart ThreadFunction
-// Parameter:    IN_OPT PVOID Context
-// Parameter:    IN THREAD_PRIORITY Priority
-// Parameter:    IN PCHECKIN_QUEUE Synch,
-// Parameter:    OUT PTHREAD * Thread
-// Parameter:    OUT BOOLEAN * PriorityCheckFailed
-//******************************************************************************
 static
 STATUS
 _SpawnThreadAndCheckPriority(
@@ -73,15 +40,10 @@ _SpawnThreadAndCheckPriority(
     PTHREAD pThread;
     STATUS status;
     BOOLEAN bPriorityCheckFailed;
-    PCHECKIN_QUEUE pContext;
 
     ASSERT(ThreadFunction != NULL);
     ASSERT(Thread != NULL);
     ASSERT(PriorityCheckFailed != NULL);
-    ASSERT(Context != NULL);
-
-    pContext = (PCHECKIN_QUEUE)Context;
-    ASSERT(pContext->Array != NULL);
 
     pThread = NULL;
     status = STATUS_SUCCESS;
@@ -100,13 +62,9 @@ _SpawnThreadAndCheckPriority(
             __leave;
         }
 
-        /// This is to make sure the new thread has time to be scheduled
+        /// This is a stupid hack to make sure the new thread has time to be scheduled
         /// and to donate its priority to us
-        /// Always wait for one single thread as we spawn only one.
-        CheckinQueueWaitOn(pContext, FALSE, 1);
-
-        // Little wait here
-        PitSleep(TEST_SLEEP_TIME_US);
+        PitSleep(TEST_SLEEP_TILL_EXECUTION);
 
         if (!_ThreadValidatePriority(Priority))
         {
@@ -132,10 +90,10 @@ STATUS
     )
 {
     STATUS status;
+    MUTEX mutex;
     PTHREAD pThread;
     BOOLEAN bCheckFuncCall;
     BOOLEAN bCheckFailed;
-    TEST_PRIORITY_DONATION_MUTEX_CTX synchContext;
 
     ASSERT(Context != NULL);
 
@@ -143,25 +101,16 @@ STATUS
 
     bCheckFuncCall = *((BOOLEAN*) Context);
 
-    DWORD bufferSize = CheckinQueuePreInit(&synchContext.SynchronizationContext, 1);
-
-    PBYTE buffer = (PBYTE)ExAllocatePoolWithTag(PoolAllocateZeroMemory | PoolAllocatePanicIfFail,
-        bufferSize, HEAP_TEST_TAG, 0);
-
-    CheckinQueueInit(&synchContext.SynchronizationContext, buffer);
-
-    MutexInit(&synchContext.Mutex, FALSE);
-    MutexAcquire(&synchContext.Mutex);
+    MutexInit(&mutex, FALSE);
+    MutexAcquire(&mutex);
 
     status = STATUS_SUCCESS;
     pThread = NULL;
 
     __try
     {
-        // Creates a thread to take the mutex and validates that the created thread
-        // donated its priority to this thread
         status = _SpawnThreadAndCheckPriority(_ThreadTakeMutex,
-                                              &synchContext,
+                                              &mutex,
                                               ThreadPriorityMaximum,
                                               &pThread,
                                               &bCheckFailed);
@@ -173,8 +122,6 @@ STATUS
 
         if (bCheckFuncCall)
         {
-            // Checks to see if its possible to lower the current thread's priority even if a higher priority thread
-            // donated its priority: it must NOT be possible.
             ThreadSetPriority(ThreadPriorityLowest);
 
             if (!_ThreadValidatePriority(ThreadPriorityMaximum))
@@ -190,11 +137,7 @@ STATUS
     }
     __finally
     {
-        MutexRelease(&synchContext.Mutex);
-
-        ExFreePoolWithTag((PVOID)synchContext.SynchronizationContext.Array, HEAP_TEST_TAG);
-
-        CheckinQueueUninit(&synchContext.SynchronizationContext);
+        MutexRelease(&mutex);
 
         if (pThread != NULL)
         {
@@ -210,18 +153,13 @@ STATUS
     return status;
 }
 
-// warning C28199: Using possibly uninitialized memory 'pThreads':  The variable has had its address taken but no assignment to it has been discovered.
-// nope, pThreads array is initialized to a NULL pointer, which the cleanup does check :)
-#pragma warning(push)
-#pragma warning(disable:28199)
-
 STATUS
 (__cdecl TestThreadPriorityDonationMultiple)(
     IN_OPT      PVOID       Context
     )
 {
     STATUS status;
-    TEST_PRIORITY_DONATION_MUTEX_CTX contexes[2];
+    MUTEX mutexes[2];
     BOOLEAN bReleasedMutexes[2];
     PTHREAD pThreads[3];
     TEST_PRIORITY_DONATION_MULTIPLE testType;
@@ -241,28 +179,21 @@ STATUS
 
     LOG_TEST_LOG("Will check scenario 0x%x\n", testType);
 
-    for (DWORD i = 0; i < ARRAYSIZE(contexes); i++)
+    for (DWORD i = 0; i < ARRAYSIZE(mutexes); ++i)
     {
-        DWORD bufferSize = CheckinQueuePreInit(&contexes[i].SynchronizationContext, 1);
-
-        PBYTE buffer = (PBYTE)ExAllocatePoolWithTag(PoolAllocateZeroMemory | PoolAllocatePanicIfFail,
-            bufferSize, HEAP_TEST_TAG, 0);
-
-        CheckinQueueInit(&contexes[i].SynchronizationContext, buffer);
-
-        MutexInit(&contexes[i].Mutex, FALSE);
-        MutexAcquire(&contexes[i].Mutex);
+        MutexInit(&mutexes[i], FALSE);
+        MutexAcquire(&mutexes[i]);
     }
 
     status = STATUS_SUCCESS;
     memzero(pThreads, ARRAYSIZE(pThreads) * sizeof(PTHREAD));
     memzero(bReleasedMutexes, ARRAYSIZE(bReleasedMutexes) * sizeof(BOOLEAN));
-    STATIC_ASSERT(ARRAYSIZE(bReleasedMutexes) == ARRAYSIZE(contexes));
+    STATIC_ASSERT(ARRAYSIZE(bReleasedMutexes) == ARRAYSIZE(mutexes));
 
     __try
     {
         status = _SpawnThreadAndCheckPriority(_ThreadTakeMutex,
-                                                   &contexes[0],
+                                                   &mutexes[0],
                                                    ThreadPriorityDefault + 4,
                                                    &pThreads[0],
                                                    &bCheckFailed);
@@ -273,7 +204,7 @@ STATUS
         }
 
         status = _SpawnThreadAndCheckPriority(_ThreadTakeMutex,
-                                                   &contexes[1],
+                                                   &mutexes[1],
                                                    ThreadPriorityDefault + 8,
                                                    &pThreads[1],
                                                    &bCheckFailed);
@@ -285,11 +216,8 @@ STATUS
 
         if (bTwoThreadsOnAlock)
         {
-            // reset the checkin_queue for this second thread
-            contexes[1].SynchronizationContext.Array[0] = FALSE;
-
             status = _SpawnThreadAndCheckPriority(_ThreadTakeMutex,
-                                                       &contexes[1],
+                                                       &mutexes[1],
                                                        ThreadPriorityDefault + 12,
                                                        &pThreads[2],
                                                        &bCheckFailed);
@@ -302,7 +230,7 @@ STATUS
 
         if (!bInverseRelease)
         {
-            MutexRelease(&contexes[1].Mutex);
+            MutexRelease(&mutexes[1]);
             bReleasedMutexes[1] = TRUE;
 
             if (!_ThreadValidatePriority(ThreadPriorityDefault + 4))
@@ -311,7 +239,7 @@ STATUS
                 __leave;
             }
 
-            MutexRelease(&contexes[0].Mutex);
+            MutexRelease(&mutexes[0]);
             bReleasedMutexes[0] = TRUE;
 
             if (!_ThreadValidatePriority(ThreadPriorityDefault))
@@ -322,7 +250,7 @@ STATUS
         }
         else
         {
-            MutexRelease(&contexes[0].Mutex);
+            MutexRelease(&mutexes[0]);
             bReleasedMutexes[0] = TRUE;
 
             if (!_ThreadValidatePriority(bTwoThreadsOnAlock ? ThreadPriorityDefault + 12 : ThreadPriorityDefault + 8))
@@ -331,7 +259,7 @@ STATUS
                 __leave;
             }
 
-            MutexRelease(&contexes[1].Mutex);
+            MutexRelease(&mutexes[1]);
             bReleasedMutexes[1] = TRUE;
 
             if (!_ThreadValidatePriority(ThreadPriorityDefault))
@@ -345,17 +273,13 @@ STATUS
     }
     __finally
     {
-        for (DWORD i = 0; i < ARRAYSIZE(contexes); ++i)
+        for (DWORD i = 0; i < ARRAYSIZE(mutexes); ++i)
         {
             if (!bReleasedMutexes[i])
             {
-                MutexRelease(&contexes[i].Mutex);
+                MutexRelease(&mutexes[i]);
                 bReleasedMutexes[i] = TRUE;
             }
-
-            ExFreePoolWithTag((PVOID)contexes[i].SynchronizationContext.Array, HEAP_TEST_TAG);
-
-            CheckinQueueUninit(&contexes[i].SynchronizationContext);
         }
 
         for (DWORD i = 0; i < ARRAYSIZE(pThreads); ++i)
@@ -375,11 +299,8 @@ STATUS
     return status;
 }
 
-#pragma warning(pop)
-
 typedef struct _DONATION_CHAIN_THREAD_CTX
 {
-    CHECKIN_QUEUE               SynchronizationContext;
     PMUTEX                      FirstMutex;
     PMUTEX                      SecondMutex;
     THREAD_PRIORITY             ExpectedPriority;
@@ -422,11 +343,7 @@ STATUS
 
         for (DWORD i = 0; i < noOfThreads; ++i)
         {
-            // T[0] (main thread) will only take M[0]
-            // T[1] will take M[1] and M[0]
-            // T[2] will take M[2] and M[1]
-            // ...
-            DWORD nxtThIdx = (i-1) % noOfThreads;
+            DWORD nxtThIdx = (i+1) % noOfThreads;
 
             MutexInit(&pDonationChainData[i].ThreadMutex, FALSE);
 
@@ -435,13 +352,6 @@ STATUS
             pDonationChainData[i].ThreadContext.FirstMutex = &pDonationChainData[i].ThreadMutex;
             pDonationChainData[i].ThreadContext.SecondMutex = &pDonationChainData[nxtThIdx].ThreadMutex;
             pDonationChainData[i].ThreadContext.ExpectedPriority = ThreadPriorityDefault + (noOfThreads - 1);
-
-            DWORD bufferSize = CheckinQueuePreInit(&pDonationChainData[i].ThreadContext.SynchronizationContext, 1);
-
-            PBYTE buffer = (PBYTE)ExAllocatePoolWithTag(PoolAllocateZeroMemory | PoolAllocatePanicIfFail,
-                bufferSize, HEAP_TEST_TAG, 0);
-
-            CheckinQueueInit(&pDonationChainData[i].ThreadContext.SynchronizationContext, buffer);
         }
 
         MutexAcquire(pDonationChainData[0].ThreadContext.FirstMutex);
@@ -451,7 +361,6 @@ STATUS
         {
             BOOLEAN bPriorityCheck;
 
-            // Each time the main thread creates a new thread it should have received a priority donation from it
             status = _SpawnThreadAndCheckPriority(_ThreadChainer,
                                                   &pDonationChainData[i].ThreadContext,
                                                   ThreadPriorityDefault + i,
@@ -495,15 +404,7 @@ STATUS
                     ThreadWaitForTermination(pDonationChainData[i].Thread, &exitStatus);
                     ThreadCloseHandle(pDonationChainData[i].Thread);
                 }
-
-                ExFreePoolWithTag((PVOID)pDonationChainData[i].ThreadContext.SynchronizationContext.Array, HEAP_TEST_TAG);
-
-                CheckinQueueUninit(&pDonationChainData[i].ThreadContext.SynchronizationContext);
             }
-            // free this also for 0
-            ExFreePoolWithTag((PVOID)pDonationChainData[0].ThreadContext.SynchronizationContext.Array, HEAP_TEST_TAG);
-
-            CheckinQueueUninit(&pDonationChainData[0].ThreadContext.SynchronizationContext);
 
             ExFreePoolWithTag(pDonationChainData, HEAP_TEST_TAG);
             pDonationChainData = NULL;
@@ -518,19 +419,12 @@ STATUS
     IN_OPT      PVOID       Context
     )
 {
-    PTEST_PRIORITY_DONATION_MUTEX_CTX pContext = (PTEST_PRIORITY_DONATION_MUTEX_CTX)Context;
-    ASSERT(pContext != NULL);
-    ASSERT(pContext->SynchronizationContext.Array != NULL);
+    PMUTEX pMutex = (PMUTEX) Context;
 
-    PMUTEX pMutex = (PMUTEX)&pContext->Mutex;
     ASSERT(pMutex != NULL);
 
     LOG_TEST_LOG("Donator thread with priority %u will attempt to take mutex!\n",
                  ThreadGetPriority(NULL));
-
-    // mark my presence
-    CheckinQueueMarkPresence(&pContext->SynchronizationContext);
-
     MutexAcquire(pMutex);
 
     LOG_TEST_LOG("Donator thread with priority %u acquired mutex!\n",
@@ -562,9 +456,6 @@ STATUS
     MutexAcquire(pCtx->FirstMutex);
     LOG_TEST_LOG("Thread 0x%X got the first lock!\n", tid);
 
-    // mark my presence
-    CheckinQueueMarkPresence(&pCtx->SynchronizationContext);
-
     MutexAcquire(pCtx->SecondMutex);
     LOG_TEST_LOG("Thread 0x%X got the second lock\n", tid);
 
@@ -591,5 +482,3 @@ STATUS
 
     return STATUS_SUCCESS;
 }
-
-#pragma warning(pop)

@@ -1,15 +1,10 @@
 #pragma once
 
-C_HEADER_START
 #include "data_type.h"
 
-#ifndef UNREFERENCED_PARAMETER
 #define UNREFERENCED_PARAMETER(x)   (x);
-#endif // UNREFERENCED_PARAMETER
 
-#ifndef NOTHING
 #define NOTHING                     ;
-#endif // NOTHING
 
 #define MAX_PATH                    260
 
@@ -19,21 +14,17 @@ C_HEADER_START
 #define TB_SIZE                     (1024*GB_SIZE)
 
 #define PAGE_SIZE                   0x1000
-
-#ifndef PAGE_SHIFT
 #define PAGE_SHIFT                  12
-#endif // PAGE_SHIFT
 
 #define SHADOW_STACK_SIZE                   0x20
 
 #define BITS_PER_BYTE                       8
 #define BITS_FOR_STRUCTURE(x)               (BITS_PER_BYTE*sizeof(x))
-#define CREATE_BIT_MASK_FOR_N_BITS(n)       (((n) >= 64) ? MAX_QWORD : (((1ULL << (n)) - 1)))
 
 // The difference between these 2 is the following one:
 // IsFlagOn succeeds if at LEAST a flag is set
 // IsBooleanFlagOn succeeds if ALL flags are set
-#define IsFlagOn(x,f)                       (0!=((x)&(f)))
+#define IsFlagOn(x,f)                       (0!=((x)&(f)))    
 #define IsBooleanFlagOn(x,f)                ((f)==((x)&(f)))
 
 #define BooleanToInteger(x)                 (!!(x))
@@ -50,8 +41,8 @@ C_HEADER_START
 
 // E.g: AlignAddressLower(0x1001,0x1000)   = 0x1000
 //      AlignAddressUpper(0x1001,0x1000)   = 0x2000
-#define AlignAddressLower(addr,alig)        ((QWORD)(addr)&~((QWORD)(alig)-1))
-#define AlignAddressUpper(addr,alig)        AlignAddressLower(((QWORD)(addr)+(alig)-1), (alig))
+#define AlignAddressLower(addr,alig)        ((QWORD)(addr)&~((alig)-1))
+#define AlignAddressUpper(addr,alig)        (((QWORD)(addr)+(alig)-1)&(~((QWORD)(alig)-1)))
 #define IsAddressAligned(addr,alig)         (0==(((QWORD)(addr))&(((QWORD)(alig))-1)))
 
 #define AddressOffset(addr,alig)            ((QWORD)(addr)&((alig)-1))
@@ -73,32 +64,25 @@ C_HEADER_START
 
 // The stack must be aligned at 0x10 bytes - this must be done before
 // the return address is pushed on the stack => the RA is aligned at 0x8 bytes
-//
+// 
 // push arg3
 // push arg2
 // push arg1
-// push arg0
+// push arg0   
 // call func  <-  rsp is 0x10 aligned
 
 // func:
 // mov  edi, edi  <- rsp is 0x8 aligned
-#define IS_STACK_ALIGNED                    IsAddressAligned((PBYTE)_AddressOfReturnAddress()+sizeof(PVOID),NATURAL_ALIGNMENT)
-#define CHECK_STACK_ALIGNMENT               ASSERT_INFO(IS_STACK_ALIGNED, "RSP at 0x%X\n", _AddressOfReturnAddress())
+#define CHECK_STACK_ALIGNMENT               ASSERT_INFO(IsAddressAligned((PBYTE)_AddressOfReturnAddress()+sizeof(PVOID),NATURAL_ALIGNMENT), "RSP at 0x%X\n", _AddressOfReturnAddress())
 #define GET_RETURN_ADDRESS                  *((PVOID*)_AddressOfReturnAddress())
 
-#ifndef CONTAINING_RECORD
 #define CONTAINING_RECORD(address, type, field) ((type *)( \
                                                   (BYTE*)(address) - \
                                                   (QWORD)(&((type *)0)->field)))
-#endif // CONTAINING_RECORD
 
-#ifndef ARRAYSIZE
 #define ARRAYSIZE(A)                            (sizeof(A)/sizeof((A)[0]))
-#endif // ARRAYSIZE
 
-#ifndef FIELD_OFFSET
 #define FIELD_OFFSET(type, field)               ((QWORD)&(((type *)0)->field))
-#endif // FIELD_OFFSET
 
 #define SECTOR_SIZE                             512
 
@@ -123,4 +107,3 @@ typedef BOOLEAN         INTR_STATE;
 // Because ps and s are positive the actual check done is only for
 // p >= b and p + ps <= b + s
 #define CHECK_BOUNDS(p,ps,b,s)      ((((QWORD)(b) <= (QWORD)(p)) )&& (((QWORD)(p) + (QWORD)(ps) ) <= ((QWORD)(b)+(QWORD)(s))))
-C_HEADER_END

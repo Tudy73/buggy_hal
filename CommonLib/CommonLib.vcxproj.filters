@@ -25,12 +25,15 @@
     <Filter Include="Header Files\headers\runtime checks">
       <UniqueIdentifier>{a14b0037-6d17-433d-bef5-efde9061f28f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\inc\native">
-      <UniqueIdentifier>{16fd42b3-a65e-40e4-893a-6d88facc2eb1}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\ref_cnt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\memory.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\string.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\strutils.c">
@@ -72,38 +75,17 @@
     <ClCompile Include="src\intutils.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\hash_table.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cl_string.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cl_memory.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\gs_checks.c">
+    <ClCompile Include="src\seh.c">
       <Filter>Source Files\runtime checks</Filter>
     </ClCompile>
-    <ClCompile Include="src\gs_utils.c">
+    <ClCompile Include="src\gs_checks.c">
       <Filter>Source Files\runtime checks</Filter>
     </ClCompile>
     <ClCompile Include="src\rtc_checks.c">
       <Filter>Source Files\runtime checks</Filter>
     </ClCompile>
-    <ClCompile Include="src\seh.c">
+    <ClCompile Include="src\gs_utils.c">
       <Filter>Source Files\runtime checks</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stack_dynamic.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\stack_interface.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cl_heap.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\checkin_queue.c">
-      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -122,6 +104,9 @@
     <ClInclude Include="inc\list.h">
       <Filter>Header Files\inc</Filter>
     </ClInclude>
+    <ClInclude Include="inc\memory.h">
+      <Filter>Header Files\inc</Filter>
+    </ClInclude>
     <ClInclude Include="inc\ref_cnt.h">
       <Filter>Header Files\inc</Filter>
     </ClInclude>
@@ -129,6 +114,9 @@
       <Filter>Header Files\inc</Filter>
     </ClInclude>
     <ClInclude Include="inc\status.h">
+      <Filter>Header Files\inc</Filter>
+    </ClInclude>
+    <ClInclude Include="inc\string.h">
       <Filter>Header Files\inc</Filter>
     </ClInclude>
     <ClInclude Include="inc\strutils.h">
@@ -171,39 +159,6 @@
       <Filter>Header Files\headers\runtime checks</Filter>
     </ClInclude>
     <ClInclude Include="inc\gs_utils.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\hash_table.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\native\memory.h">
-      <Filter>Header Files\inc\native</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\native\string.h">
-      <Filter>Header Files\inc\native</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cl_string.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cl_memory.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\slist.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\stack_dynamic.h">
-      <Filter>Header Files\headers</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\stack_internal.h">
-      <Filter>Header Files\headers</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\stack_interface.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cl_heap.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\checkin_queue.h">
       <Filter>Header Files\inc</Filter>
     </ClInclude>
   </ItemGroup>

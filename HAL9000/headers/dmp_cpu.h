@@ -4,13 +4,8 @@
 #include "isr.h"
 
 void
-DumpRegisterArea(
-    IN  REGISTER_AREA*                  RegisterArea
-    );
-
-void
 DumpProcessorState(
-    IN  COMPLETE_PROCESSOR_STATE*       ProcessorState
+    IN  PROCESSOR_STATE*    ProcessorState
     );
 
 void

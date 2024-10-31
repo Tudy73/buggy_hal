@@ -1,6 +1,7 @@
 #include "hal_base.h"
 #include "tss.h"
 
+SAL_SUCCESS
 STATUS
 TssInstall(
     OUT     PTSS        Tss,

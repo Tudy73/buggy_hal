@@ -77,28 +77,19 @@ VmmUnmapMemoryEx(
     IN      BOOLEAN                 ReleaseMemory
     );
 
-#define VmmGetPhysicalAddress(Cr3,Va)   VmmGetPhysicalAddressEx((Cr3),(Va),NULL,NULL)
-
 //******************************************************************************
-// Function:     VmmGetPhysicalAddressEx
+// Function:     VmmGetPhysicalAddress
 // Description:  Retrieves the physical address corresponding to VirtualAddress
-//               given Cr3 and optionally retrieves the accessed and dirty
-//               bits for the address.
-// Returns:      PHYSICAL_ADDRESS - If NULL the virtual addressed is not mapped
+//               given Cr3.
+// Returns:      PHYSICAL_ADDRESS
 // Parameter:    IN PML4 Cr3
 // Parameter:    IN PVOID VirtualAddress
-// Parameter:    OUT_OPT BOOLEAN* Accessed
-// Parameter:    OUT_OPT BOOLEAN* Dirty
-// NOTE:         If the Accessed or Dirty parameter is non-NULL the
-//               corresponding bit will be cleared after the value is saved.
 //******************************************************************************
 PTR_SUCCESS
 PHYSICAL_ADDRESS
-VmmGetPhysicalAddressEx(
+VmmGetPhysicalAddress(
     IN      PML4                    Cr3,
-    IN      PVOID                   VirtualAddress,
-    OUT_OPT BOOLEAN*                Accessed,
-    OUT_OPT BOOLEAN*                Dirty
+    IN      PVOID                   VirtualAddress
     );
 
 //******************************************************************************

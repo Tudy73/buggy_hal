@@ -29,7 +29,7 @@ SpinlockAcquire(
     *IntrState = CpuIntrDisable();
 
     pCurrentCpu = CpuGetCurrent();
-
+    
     ASSERT_INFO(pCurrentCpu != Lock->Holder,
                 "Lock initial taken by function 0x%X, now called by 0x%X\n",
                 Lock->FunctionWhichTookLock,
@@ -57,31 +57,14 @@ SpinlockTryAcquire(
     OUT         INTR_STATE*     IntrState
     )
 {
-    PVOID pCurrentCpu;
-
     BOOLEAN acquired;
 
-    ASSERT(NULL != Lock);
-    ASSERT(NULL != IntrState);
-
     *IntrState = CpuIntrDisable();
-
-    pCurrentCpu = CpuGetCurrent();
 
     acquired = (LOCK_FREE == _InterlockedCompareExchange8(&Lock->State, LOCK_TAKEN, LOCK_FREE));
     if (!acquired)
     {
         CpuIntrSetState(*IntrState);
-    }
-    else
-    {
-        ASSERT(NULL == Lock->FunctionWhichTookLock);
-        ASSERT(NULL == Lock->Holder);
-
-        Lock->Holder = pCurrentCpu;
-        Lock->FunctionWhichTookLock = *((PVOID*)_AddressOfReturnAddress());
-
-        ASSERT(LOCK_TAKEN == Lock->State);
     }
 
     return acquired;
@@ -104,8 +87,8 @@ SpinlockRelease(
     PVOID pCurrentCpu = CpuGetCurrent();
 
     ASSERT(NULL != Lock);
-    ASSERT_INFO(pCurrentCpu == Lock->Holder,
-                "LockTaken by CPU: 0x%X in function: 0x%X\nNow release by CPU: 0x%X in function: 0x%X\n",
+    ASSERT_INFO(pCurrentCpu == Lock->Holder, 
+                "LockTaken by CPU: 0x%X in function: 0x%X\nNow release by CPU: 0x%X in function: 0x%X\n", 
                 Lock->Holder, Lock->FunctionWhichTookLock,
                 pCurrentCpu, *( (PVOID*) _AddressOfReturnAddress() ) );
     ASSERT(INTR_OFF == CpuIntrGetState());

@@ -53,6 +53,7 @@ _EthRetrieveMacAddress(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _EthRxInit(
     IN      PETH_DEVICE         Device
@@ -65,6 +66,7 @@ _EthTxInit(
     );
 
 static
+SAL_SUCCESS
 STATUS
 _EthInterruptInit(
     IN      PETH_DEVICE         Device
@@ -82,6 +84,7 @@ _EthSignalTxQueueFullIfNecessary(
     IN      PETH_DEVICE         Device
     );
 
+SAL_SUCCESS
 STATUS
 EthInitializeDevice(
     IN_READS(ETH_NO_OF_BARS_USED)   PPCI_BAR        Bars,
@@ -459,6 +462,7 @@ _EthRetrieveMacAddress(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _EthRxInit(
     IN      PETH_DEVICE         Device
@@ -591,6 +595,7 @@ _EthTxInit(
 }
 
 static
+SAL_SUCCESS
 STATUS
 _EthInterruptInit(
     IN      PETH_DEVICE         Device

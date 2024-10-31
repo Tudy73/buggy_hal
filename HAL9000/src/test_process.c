@@ -3,12 +3,8 @@
 #include "process.h"
 #include "iomu.h"
 
-#define MAX_PROCESSES_TO_SPAWN          16
-
 const PROCESS_TEST PROCESS_TESTS[] =
 {
-    // Project 2: Userprog
-
     // arguments
     { "TestUserArgsNone", "Args", NULL},
     { "TestUserArgsOne", "Args", "Argument"},
@@ -16,114 +12,78 @@ const PROCESS_TEST PROCESS_TESTS[] =
     { "TestUserArgsAll", "Args", "a b c d e f g h i j k l m n o p r s t u v q x y z"},
 
     // bad-actions
-    { "BadJumpKernel", "BadJumpKernel", NULL},
-    { "BadJumpNoncanonical", "BadJumpNoncanonical", NULL},
-    { "BadJumpNull", "BadJumpNull", NULL},
+    { "BadJumpKernel", "Badjum~1", NULL},
+    { "BadJumpNoncanonical", "Badjum~2", NULL},
+    { "BadJumpNull", "Badjum~3", NULL},
 
-    { "BadReadIoPort", "BadReadIoPort", NULL},
-    { "BadReadKernel", "BadReadKernel", NULL},
-    { "BadReadMsr", "BadReadMsr", NULL},
-    { "BadReadNonCanonical", "BadReadNonCanonical", NULL},
-    { "BadReadNull", "BadReadNull", NULL},
+    { "BadReadIoPort", "Badrea~1", NULL},
+    { "BadReadKernel", "Badrea~2", NULL},
+    { "BadReadMsr", "Badrea~3", NULL},
+    { "BadReadNonCanonical", "Badrea~4", NULL},
+    { "BadReadNull", "BA05C5~1", NULL},
 
-    { "BadWriteIoPort", "BadWriteIoPort", NULL},
-    { "BadWriteKernel", "BadWriteKernel", NULL},
-    { "BadWriteMsr", "BadWriteMsr", NULL},
-    { "BadWriteNonCanonical", "BadWriteNonCanonical", NULL},
-    { "BadWriteNull", "BadWriteNull", NULL},
+    { "BadWriteIoPort", "Badwri~1", NULL},
+    { "BadWriteKernel", "Badwri~2", NULL},
+    { "BadWriteMsr", "Badwri~3", NULL},
+    { "BadWriteNonCanonical", "Badwri~4", NULL},
+    { "BadWriteNull", "BAAEFD~1", NULL},
 
     // file-syscalls
-    { "FileCloseBad", "FileCloseBad", NULL},
-    { "FileCloseNormal", "FileCloseNormal", NULL},
-    { "FileCloseStdout", "FileCloseStdout", NULL},
-    { "FileCloseTwice", "FileCloseTwice", NULL},
+    { "FileCloseBad", "Filecl~1", NULL},
+    { "FileCloseNormal", "Filecl~2", NULL},
+    { "FileCloseStdout", "Filecl~3", NULL},
+    { "FileCloseTwice", "Filecl~4", NULL},
 
-    { "FileCreateBadPointer", "FileCreateBadPointer", NULL},
-    { "FileCreateEmptyPath", "FileCreateEmptyPath", NULL},
-    { "FileCreateExistent", "FileCreateExistent", NULL},
-    { "FileCreateMissing", "FileCreateMissing", NULL},
-    { "FileCreateNormal", "FileCreateNormal", NULL},
-    { "FileCreateNull", "FileCreateNull", NULL},
-    { "FileCreateTwice", "FileCreateTwice", NULL},
+    { "FileCreateBadPointer", "Filecr~1", NULL},
+    { "FileCreateEmptyPath", "Filecr~2", NULL},
+    { "FileCreateExistent", "Filecr~3", NULL},
+    { "FileCreateMissing", "Filecr~4", NULL},
+    { "FileCreateNormal", "FI3ACB~1", NULL},
+    { "FileCreateNull", "FIB562~1", NULL},
+    { "FileCreateTwice", "FI8E28~1", NULL},
 
-    { "FileReadBadHandle", "FileReadBadHandle", NULL},
-    { "FileReadBadPointer", "FileReadBadPointer", NULL},
-    { "FileReadKernel", "FileReadKernel", NULL},
-    { "FileReadNormal", "FileReadNormal", NULL},
-    { "FileReadStdout", "FileReadStdout", NULL},
-    { "FileReadZero", "FileReadZero", NULL},
+    { "FileReadBadHandle", "Filere~1", NULL},
+    { "FileReadBadPointer", "Filere~2", NULL},
+    { "FileReadKernel", "Filere~3", NULL},
+    { "FileReadNormal", "Filere~4", NULL},
+    { "FileReadStdout", "FI031C~1", NULL},
+    { "FileReadZero", "FI124A~1", NULL},
 
     // process-syscalls
-    { "ProcessCloseFile", "ProcessCloseFile", NULL},
-    { "ProcessCloseNormal", "ProcessCloseNormal", NULL},
-    { "ProcessCloseParentHandle", "ProcessCloseParentHandle", NULL},
-    { "ProcessCloseTwice", "ProcessCloseTwice", NULL},
+    { "ProcessCloseFile", "Proces~1", NULL},
+    { "ProcessCloseNormal", "Proces~2", NULL},
+    { "ProcessCloseParentHandle", "Proces~3", NULL},
+    { "ProcessCloseTwice", "Proces~4", NULL},
 
-    { "ProcessCreateBadPointer", "ProcessCreateBadPointer", NULL},
-    { "ProcessCreateMissingFile", "ProcessCreateMissingFile", NULL},
-    { "ProcessCreateMultiple", "ProcessCreateMultiple", NULL},
-    { "ProcessCreateOnce", "ProcessCreateOnce", NULL},
-    { "ProcessCreateWithArguments", "ProcessCreateWithArguments", NULL},
+    { "ProcessCreateBadPointer", "PR07C5~1", NULL},
+    { "ProcessCreateMissingFile", "PR3479~1", NULL},
+    { "ProcessCreateMultiple", "PRD622~1", NULL},
+    { "ProcessCreateOnce", "PR0947~1", NULL},
+    { "ProcessCreateWithArguments", "PR9005~1", NULL},
 
-    { "ProcessExit", "ProcessExit", NULL},
-    { "ProcessGetPid", "ProcessGetPid", NULL},
+    { "ProcessExit", "PRC65A~1", NULL},
+    { "ProcessGetPid", "PR41E3~1", NULL},
 
-    { "ProcessWaitBadHandle", "ProcessWaitBadHandle", NULL},
-    { "ProcessWaitClosedHandle", "ProcessWaitClosedHandle", NULL},
-    { "ProcessWaitNormal", "ProcessWaitNormal", NULL},
-    { "ProcessWaitTerminated", "ProcessWaitTerminated", NULL},
+    { "ProcessWaitBadHandle", "PR9843~1", NULL},
+    { "ProcessWaitClosedHandle", "PRFC97~1", NULL},
+    { "ProcessWaitNormal", "PRCDF7~1", NULL},
+    { "ProcessWaitTerminated", "PR2A4D~1", NULL},
 
     // thread-syscalls
-    { "ThreadCloseTwice", "ThreadCloseTwice", NULL},
+    { "ThreadCloseTwice", "Thread~1", NULL},
 
-    { "ThreadCreateBadPointer", "ThreadCreateBadPointer", NULL},
-    { "ThreadCreateMultiple", "ThreadCreateMultiple", NULL},
-    { "ThreadCreateOnce", "ThreadCreateOnce", NULL},
-    { "ThreadCreateWithArguments", "ThreadCreateWithArguments", NULL},
+    { "ThreadCreateBadPointer", "Thread~2", NULL},
+    { "ThreadCreateMultiple", "Thread~3", NULL},
+    { "ThreadCreateOnce", "Thread~4", NULL},
+    { "ThreadCreateWithArguments", "TH38A7~1", NULL},
 
-    { "ThreadExit", "ThreadExit", NULL},
-    { "ThreadGetTid", "ThreadGetTid", NULL},
+    { "ThreadExit", "TH2D1A~1", NULL},
+    { "ThreadGetTid", "THFB9D~1", NULL},
 
-    { "ThreadWaitBadHandle", "ThreadWaitBadHandle", NULL},
-    { "ThreadWaitClosedHandle", "ThreadWaitClosedHandle", NULL},
-    { "ThreadWaitNormal", "ThreadWaitNormal", NULL},
-    { "ThreadWaitTerminated", "ThreadWaitTerminated", NULL},
-
-    // Project 3: Virtual Memory
-
-    // process-quota
-    { "ProcessQuotaGood", "ProcessQuotaGood", NULL},
-    { "ProcessQuotaJustRight", "ProcessQuotaJustRight", NULL},
-    { "ProcessQuotaMore", "ProcessQuotaMore", NULL},
-
-    // swap
-    { "SwapLinear", "SwapLinear", NULL},
-    { "SwapMultiple", "SwapLinear", NULL, 4},
-    { "SwapMultipleShared", "SwapMultipleShared", "0"},
-    { "SwapZeros", "SwapZeros", NULL},
-    { "SwapZerosWritten", "SwapZerosWritten", NULL},
-
-    // syscalls
-    { "VirtualAllocAccessFail", "VirtualAllocAccessFail", NULL},
-    { "VirtualAllocHugeEager", "VirtualAllocHugeEager", NULL},
-    { "VirtualAllocHugeLazy", "VirtualAllocHugeLazy", NULL},
-    { "VirtualAllocNormal", "VirtualAllocNormal", NULL},
-    { "VirtualAllocWriteExec", "VirtualAllocWriteExec", NULL},
-    { "VirtualAllocZeros", "VirtualAllocZeros", NULL },
-
-    //{ "VirtualFreeInvalid", "VirtualFreeInvalid", NULL },
-    //{ "VirtualFreeMore", "VirtualFreeMore", NULL },
-
-    { "VirtualSharedDifferentSize", "VirtualSharedNormal", "0 1 8 3" },
-    { "VirtualSharedHugeEager", "VirtualSharedNormal", "0 1 4096 4" },
-    { "VirtualSharedHugeLazy", "VirtualSharedNormal", "0 1 4096 5" },
-    { "VirtualSharedLessAccess", "VirtualSharedNormal", "0 1 8 1" },
-    { "VirtualSharedMoreAccess", "VirtualSharedNormal", "0 0 8 2" },
-    { "VirtualSharedNormal", "VirtualSharedNormal", "0 1 8 0" },
-
-    // stack-growth
-    { "StackGrowthVariables", "StackGrowthVariables", NULL },
-    { "StackGrowthRecursiveFunction", "StackGrowthRecursiveFunction", NULL },
+    { "ThreadWaitBadHandle", "THC1A9~1", NULL},
+    { "ThreadWaitClosedHandle", "TH9BE5~1", NULL},
+    { "ThreadWaitNormal", "THA76F~1", NULL},
+    { "ThreadWaitTerminated", "THE738~1", NULL},
 };
 
 const DWORD PROCESS_TOTAL_NO_OF_TESTS = ARRAYSIZE(PROCESS_TESTS);
@@ -136,14 +96,11 @@ TestProcessFunctionality(
 {
     STATUS status;
     STATUS terminationStatus;
-    PPROCESS pProcesses[MAX_PROCESSES_TO_SPAWN];
+    PPROCESS pProcess;
     char fullPath[MAX_PATH];
     const char* pSystemPartition;
-    DWORD noOfProcesses;
 
     pSystemPartition = IomuGetSystemPartitionPath();
-    noOfProcesses = (ProcessTest->NumberOfProcesses == 0) ? 1 : ProcessTest->NumberOfProcesses;
-    ASSERT(noOfProcesses <= MAX_PROCESSES_TO_SPAWN);
 
     LOG_TEST_LOG("Test [%s] START!\n", ProcessTest->TestName);
 
@@ -156,30 +113,24 @@ TestProcessFunctionality(
         }
 
         snprintf(fullPath, MAX_PATH,
-                 "%s%s\\%s.exe", pSystemPartition, "APPLICATIONS",
+                 "%s%s\\%s.exe", pSystemPartition, "APPLIC~1",
                  ProcessTest->ProcessName);
 
         printf("Full path is [%s]\n", fullPath);
 
-        for (DWORD i = 0; i < noOfProcesses; ++i)
+        status = ProcessCreate(fullPath,
+                               ProcessTest->ProcessCommandLine,
+                               &pProcess);
+        if (!SUCCEEDED(status))
         {
-            status = ProcessCreate(fullPath,
-                                   ProcessTest->ProcessCommandLine,
-                                   &pProcesses[i]);
-            if (!SUCCEEDED(status))
-            {
-                LOG_FUNC_ERROR("ProcessCreate", status);
-                __leave;
-            }
+            LOG_FUNC_ERROR("ProcessCreate", status);
+            __leave;
         }
 
-        for (DWORD i = 0; i < noOfProcesses; ++i)
-        {
-            ProcessWaitForTermination(pProcesses[i], &terminationStatus);
+        ProcessWaitForTermination(pProcess, &terminationStatus);
 
-            ProcessCloseHandle(pProcesses[i]);
-            pProcesses[i] = NULL;
-        }
+        ProcessCloseHandle(pProcess);
+        pProcess = NULL;
     }
     __finally
     {

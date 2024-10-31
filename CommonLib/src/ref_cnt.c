@@ -1,6 +1,6 @@
 #include "common_lib.h"
 #include "ref_cnt.h"
-#include "cl_memory.h"
+#include "memory.h"
 
 void
 RfcPreInit(
@@ -47,7 +47,7 @@ RfcReference(
 
     newRefCount = (DWORD)_InterlockedIncrement(&Object->ReferenceCount);
     ASSERT_INFO(MAX_DWORD > newRefCount, "Reached max reference count");
-    ASSERT_INFO( 1 <= newRefCount,
+    ASSERT_INFO( 1 <= newRefCount, 
                 "Inexistent object with %u references referenced",
                 newRefCount - 1
                 );

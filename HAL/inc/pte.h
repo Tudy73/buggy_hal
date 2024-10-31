@@ -2,9 +2,6 @@
 
 #define MAXPHYADDR                                  52
 
-#define PAGING_TABLES_FIRST_LEVEL                   1
-#define PAGING_TABLES_LAST_LEVEL                    4
-
 // 63:48 must equal bit 47 for the address to be canonical
 #define VA_HIGHEST_VALID_BIT                                        47
 
@@ -33,9 +30,6 @@
 typedef WORD PCID;
 
 #pragma pack(push,1)
-
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 
@@ -49,13 +43,13 @@ typedef union _PML4
 {
     union
     {
-        struct
+        struct 
         {
             QWORD           PCID                :   PCID_NO_OF_BITS;
             QWORD           PhysicalAddress     :   MAXPHYADDR - 12;
             QWORD           Reserved            :   64 - MAXPHYADDR;
         } Pcide;
-        struct
+        struct 
         {
             QWORD           Ignored0            :   3;
             QWORD           PWT                 :   1;
@@ -113,14 +107,14 @@ typedef struct _PDPT_ENTRY_1G
     QWORD           UserSupervisor      :   1;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Accessed            :   1;
+    QWORD           Accessed            :   1;   
     QWORD           Dirty               :   1;
     QWORD           PageSize            :   1;  // Must be 1
     QWORD           Global              :   1;
     QWORD           Ignored             :   3;
     QWORD           PAT                 :   1;
     QWORD           Reserved            :   17;
-    QWORD           PhysicalAddress     :   MAXPHYADDR-30;
+    QWORD           PhysicalAddress     :   MAXPHYADDR-30;          
     QWORD           Ignored2            :   11;
     QWORD           XD                  :   1;
 } PDPT_ENTRY_1G, *PPDTP_ENTRY_1G;
@@ -134,7 +128,7 @@ typedef struct _PD_ENTRY_PT
     QWORD           UserSupervisor      :   1;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Accessed            :   1;
+    QWORD           Accessed            :   1;   
     QWORD           Ignored0            :   1;
     QWORD           PageSize            :   1;  // Must be 0
     QWORD           Ignored1            :   4;
@@ -142,7 +136,7 @@ typedef struct _PD_ENTRY_PT
     QWORD           Ignored2            :   11;
     QWORD           XD                  :   1;
 } PD_ENTRY_PT, *PPD_ENTRY_PT;
-STATIC_ASSERT( sizeof( PD_ENTRY_PT ) == sizeof( QWORD ) );
+STATIC_ASSERT( sizeof( PD_ENTRY_PT ) == sizeof( QWORD ) );   
 
 // PD_ENTRY that maps a 2-MByte Page
 typedef struct _PD_ENTRY_2MB
@@ -152,14 +146,14 @@ typedef struct _PD_ENTRY_2MB
     QWORD           UserSupervisor      :   1;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Accessed            :   1;
+    QWORD           Accessed            :   1;   
     QWORD           Dirty               :   1;
     QWORD           PageSize            :   1;  // Must be 1
     QWORD           Global              :   1;
     QWORD           Ignored             :   3;
     QWORD           PAT                 :   1;
     QWORD           Reserved            :   8;
-    QWORD           PhysicalAddress     :   MAXPHYADDR-21;
+    QWORD           PhysicalAddress     :   MAXPHYADDR-21;          
     QWORD           Ignored2            :   11;
     QWORD           XD                  :   1;
 } PD_ENTRY_2MB, *PPD_ENTRY_2MB;
@@ -172,12 +166,12 @@ typedef struct _PT_ENTRY
     QWORD           UserSupervisor      :   1;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Accessed            :   1;
+    QWORD           Accessed            :   1;   
     QWORD           Dirty               :   1;
     QWORD           PAT                 :   1;
     QWORD           Global              :   1;
     QWORD           Ignored0            :   3;
-    QWORD           PhysicalAddress     :   MAXPHYADDR-12;
+    QWORD           PhysicalAddress     :   MAXPHYADDR-12;          
     QWORD           Ignored1            :   11;
     QWORD           XD                  :   1;
 } PT_ENTRY, *PPT_ENTRY;
@@ -200,7 +194,7 @@ typedef struct _PDPT_PAE_ENTRY_PD
     QWORD           Reserved0           :   2;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Reserved1           :   4;
+    QWORD           Reserved1           :   4;   
     QWORD           Ignored0            :   3;
     QWORD           PhysicalAddress     :   MAXPHYADDR-12;
     QWORD           Reserved2           :   12;
@@ -252,12 +246,12 @@ typedef struct _PT_PAE_ENTRY
     QWORD           UserSupervisor      :   1;
     QWORD           PWT                 :   1;
     QWORD           PCD                 :   1;
-    QWORD           Accessed            :   1;
+    QWORD           Accessed            :   1;   
     QWORD           Dirty               :   1;
     QWORD           PAT                 :   1;
     QWORD           Global              :   1;
     QWORD           Ignored             :   3;
-    QWORD           PhysicalAddress     :   MAXPHYADDR-12;
+    QWORD           PhysicalAddress     :   MAXPHYADDR-12;          
     QWORD           Reserved            :   11;
     QWORD           XD                  :   1;
 } PT_PAE_ENTRY, *PPT_PAE_ENTRY;
@@ -340,7 +334,8 @@ typedef struct _PTE_MAP_FLAGS
     WORD            __Reserved0          :    7;
 } PTE_MAP_FLAGS, *PPTE_MAP_FLAGS;
 STATIC_ASSERT(sizeof(PTE_MAP_FLAGS) == sizeof(WORD));
-#pragma warning(pop)
+#pragma warning(default:4214)
+#pragma warning(default:4201)
 #pragma pack(pop)
 
 void
@@ -369,16 +364,3 @@ BOOLEAN
 PteIsPresent(
     IN          PVOID           PageTable
     );
-
-__forceinline
-void
-PageInvalidateTlb(
-    IN          PVOID           Page
-    )
-{
-    // This is a HACK done to prevent a Visual C compiler bug which sometimes (if 2 __invlpg are one after another)
-    // causes the __invlpg to generate a swapgs instruction :|
-    // Yeah, good job Microsoft...
-    _ReadWriteBarrier();
-    __invlpg(Page);
-}

@@ -173,7 +173,7 @@ void
 AcpiOsDeleteLock (
     ACPI_SPINLOCK           Handle)
 {
-    ASSERT(NULL != Handle);
+    ASSERT (NULL != Handle)
 
     LOG_FUNC_START;
 
@@ -196,9 +196,6 @@ AcpiOsAcquireLock (
 
     LockAcquire((PLOCK) Handle, &intrState);
 
-    // Warning C26165 Possibly failing to release lock
-    // Because we can't modify the ACPICA headers we have nothing to do but suppress the warning
-#pragma warning(suppress: 26165)
     return intrState;
 }
 #endif
@@ -211,14 +208,8 @@ AcpiOsReleaseLock (
 {
     ASSERT( NULL != Handle );
 
-    // Warning C26110 Caller failing to hold lock before calling function
-    // Because we can't modify the ACPICA headers we have nothing to do but suppress the warning
-#pragma warning(suppress: 26110)
     LockRelease(Handle, (INTR_STATE) Flags);
 
-    // Warning C26167 Possibly releasing unheld lock
-    // Because we can't modify the ACPICA headers we have nothing to do but suppress the warning
-#pragma warning(suppress: 26167)
     return;
 }
 #endif
@@ -472,7 +463,9 @@ AcpiOsUnmapMemory (
     LOG_TRACE_ACPI( "AcpiOsUnmapMemory about to unmap 0x%X bytes starting at VA 0x%X PA 0x%X\n",
         Size, LogicalAddress, MmuGetPhysicalAddress(LogicalAddress) );
 
-    MmuUnmapSystemMemory( LogicalAddress, ( DWORD ) Size );
+    // It would be dangerous to unmap the memory because it may be used by other
+    // components as well
+    //UnmapMemory( LogicalAddress, ( DWORD ) Size );
 
     LOG_FUNC_END;
 }
@@ -921,13 +914,13 @@ AcpiOsWritePciConfiguration (
     PCI_DEVICE_LOCATION pciDevice;
     STATUS status;
 
+    ASSERT(0 == PciId->Segment);
+    ASSERT(IsAddressAligned(Reg, Width / BITS_PER_BYTE));
+
     if ((NULL == PciId) || (Reg > MAX_WORD) || (Width > BITS_FOR_STRUCTURE(QWORD)))
     {
         return AE_BAD_PARAMETER;
     }
-
-    ASSERT(0 == PciId->Segment);
-    ASSERT(IsAddressAligned(Reg, Width / BITS_PER_BYTE));
 
     memzero(&pciDevice, sizeof(PCI_DEVICE_LOCATION));
     status = STATUS_SUCCESS;
@@ -1350,20 +1343,3 @@ AcpiOsSetFileOffset (
     return AE_OK;
 }
 #endif
-
-#undef memset
-#ifdef NDEBUG
-#pragma function(memset)
-#endif
-_At_buffer_(address, i, size, _Post_satisfies_(((PBYTE)address)[i] == value))
-void*
-memset(
-    OUT_WRITES_BYTES_ALL(size)  PVOID address,
-    IN                          BYTE value,
-    IN                          DWORD size
-)
-{
-    cl_memset(address, value, size);
-
-    return address;
-}

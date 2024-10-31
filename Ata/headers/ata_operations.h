@@ -2,6 +2,7 @@
 
 #define ATA_NO_OF_BARS_USED     5
 
+SAL_SUCCESS
 STATUS
 AtaInitialize(
     IN                              PPCI_DEVICE_DESCRIPTION     PciDevice,
@@ -10,6 +11,7 @@ AtaInitialize(
     IN                              PDEVICE_OBJECT              Device
     );
 
+SAL_SUCCESS
 STATUS
 AtaReadWriteSectors(
     IN                              PATA_DEVICE                 Device,

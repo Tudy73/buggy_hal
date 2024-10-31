@@ -1,6 +1,5 @@
 #pragma once
 
-C_HEADER_START
 //******************************************************************************
 // Function:     FUNC_FreeFunction
 // Description:  Function called when the ReferenceCount of the object reaches 0
@@ -70,4 +69,3 @@ DWORD
 RfcDereference(
     INOUT   REF_COUNT*              Object
     );
-C_HEADER_END

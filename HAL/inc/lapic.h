@@ -11,7 +11,7 @@ LapicInitialize(
 void
 LapicSetLogicalApicId(
     IN      PVOID                           ApicBaseAddress,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_ID                         LogicalApicId,
     IN      BYTE                            DestinationFormat
     );
@@ -33,12 +33,12 @@ void
 LapicConfigureTimer(
     IN      PVOID                           ApicBaseAddress,
     IN      BYTE                            TimerInterruptVector,
-    IN     _Strict_type_match_
+    IN     _Strict_type_match_ 
             APIC_DIVIDE_VALUE               DivideValue
     );
 
 void
-LapicSetTimerInterval(
+LapicEnableTimer(
     IN      PVOID                           ApicBaseAddress,
     IN      DWORD                           TimerCount
     );
@@ -58,11 +58,11 @@ LapicSendEOI(
 void
 LapicSendIpi(
     IN      PVOID                           ApicBaseAddress,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_ID                         ApicId,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_DELIVERY_MODE              DeliveryMode,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_DESTINATION_SHORTHAND      DestinationShorthand,
     IN      _Strict_type_match_
             APIC_DESTINATION_MODE           DestinationMode,

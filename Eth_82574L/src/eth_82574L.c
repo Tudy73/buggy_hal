@@ -50,6 +50,7 @@ _EthInitializeBuffers(
     Buffers->BufferSize = BufferInit->BufferSize;
 }
 
+SAL_SUCCESS
 STATUS
 (__cdecl Eth82574LDriverEntry)(
     INOUT       PDRIVER_OBJECT      DriverObject

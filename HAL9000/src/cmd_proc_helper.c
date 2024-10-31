@@ -172,7 +172,7 @@ void
 
     if (!bFoundTest)
     {
-        LOG_WARNING("Test [%s] does not exist. Try one of the following tests:\n", TestName);
+        pwarn("Test [%s] does not exist. Try one of the following tests:\n", TestName);
         _CmdHelperPrintProcessFunctions();
     }
     else

@@ -1,4 +1,5 @@
 #include "test_common.h"
+#include "test_heap.h"
 #include "test_bitmap.h"
 #include "test_pmm.h"
 #include "test_vmm.h"

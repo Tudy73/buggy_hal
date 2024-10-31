@@ -2,6 +2,7 @@
 
 #include "list.h"
 
+SAL_SUCCESS
 STATUS
 ApTrampSetupLowerMemory(
     IN      PLIST_ENTRY     CpuList,

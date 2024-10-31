@@ -2,6 +2,7 @@
 #include "volume.h"
 #include "volume_dispatch.h"
 
+SAL_SUCCESS
 static
 STATUS
 _VolInitialize(
@@ -10,6 +11,7 @@ _VolInitialize(
     INOUT       PDRIVER_OBJECT          DriverObject
     );
 
+SAL_SUCCESS
 STATUS
 (__cdecl VolDriverEntry)(
     INOUT       PDRIVER_OBJECT      DriverObject
@@ -156,6 +158,7 @@ STATUS
     return status;
 }
 
+SAL_SUCCESS
 STATUS
 _VolInitialize(
     IN          PDEVICE_OBJECT          Disk,

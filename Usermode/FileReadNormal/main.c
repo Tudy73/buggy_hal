@@ -4,8 +4,6 @@
 
 #define EXPECTED_BUFFER "UserModeApplications:Applications"
 
-#define MIN_BUFFER_SIZE     0x200
-
 STATUS
 __main(
     DWORD       argc,
@@ -15,13 +13,13 @@ __main(
     STATUS status;
     UM_HANDLE handle;
     QWORD bytesRead;
-    BYTE bufferRead[MIN_BUFFER_SIZE];
+    BYTE bufferRead[sizeof(EXPECTED_BUFFER)];
 
     UNREFERENCED_PARAMETER(argc);
     UNREFERENCED_PARAMETER(argv);
 
     handle = UM_INVALID_HANDLE_VALUE;
-    bufferRead[MIN_BUFFER_SIZE - 1] = '\0';
+    bufferRead[sizeof(EXPECTED_BUFFER)-1] = '\0';
 
     __try
     {
@@ -38,7 +36,7 @@ __main(
 
         status = SyscallFileRead(handle,
                                  bufferRead,
-                                 MIN_BUFFER_SIZE,
+                                 sizeof(EXPECTED_BUFFER) - 1,
                                  &bytesRead);
         if (!SUCCEEDED(status))
         {
@@ -46,14 +44,14 @@ __main(
             __leave;
         }
 
-        if (bytesRead != MIN_BUFFER_SIZE)
+        if (bytesRead != sizeof(EXPECTED_BUFFER) - 1)
         {
             LOG_ERROR("We expected to read %U bytes, while we actually read %U!\n",
-                      MIN_BUFFER_SIZE, bytesRead);
+                      sizeof(EXPECTED_BUFFER) - 1, bytesRead);
             __leave;
         }
 
-        if (memcmp(bufferRead, EXPECTED_BUFFER, (DWORD) sizeof(EXPECTED_BUFFER) - 1) != 0)
+        if (memcmp(bufferRead, EXPECTED_BUFFER, (DWORD) bytesRead) != 0)
         {
             LOG_ERROR("Expected buffer is [%s], buffer read is [%s]\n",
                       EXPECTED_BUFFER, bufferRead);

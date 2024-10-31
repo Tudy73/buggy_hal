@@ -16,9 +16,6 @@
     <Filter Include="Header Files\inc">
       <UniqueIdentifier>{fa602fc5-7cf9-45fb-8274-44905e052960}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\inc\Virtualization">
-      <UniqueIdentifier>{cb6e23e9-4765-4733-8e52-d8bf31ddc027}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\idt.c">
@@ -64,12 +61,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\pcie.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\vmx.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\hw_fpu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -157,30 +148,6 @@
     </ClInclude>
     <ClInclude Include="headers\pci_common.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\vmx_exit_reasons.h">
-      <Filter>Header Files\inc\Virtualization</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\vmcs_fields.h">
-      <Filter>Header Files\inc\Virtualization</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\vmx.h">
-      <Filter>Header Files\inc\Virtualization</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\vmx_exit.h">
-      <Filter>Header Files\inc\Virtualization</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\hw_fpu.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cpuid_leaf.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cpu_utils.h">
-      <Filter>Header Files\inc</Filter>
-    </ClInclude>
-    <ClInclude Include="inc\cpu_if.h">
-      <Filter>Header Files\inc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -2,6 +2,7 @@
 
 #include "pe_exports.h"
 
+SAL_SUCCESS
 STATUS
 PeRetrieveNtHeader(
     IN_READS_BYTES(ImageSize)   PVOID                   ImageBase,
@@ -9,6 +10,7 @@ PeRetrieveNtHeader(
     OUT                         PPE_NT_HEADER_INFO      NtInfo
     );
 
+SAL_SUCCESS
 STATUS
 PeRetrieveSection(
     IN                          PPE_NT_HEADER_INFO      NtInfo,
@@ -16,6 +18,7 @@ PeRetrieveSection(
     OUT                         PPE_SECTION_INFO        SectionInfo
     );
 
+SAL_SUCCESS
 STATUS
 PeRetrieveDataDirectory(
     IN                          PPE_NT_HEADER_INFO      NtInfo,

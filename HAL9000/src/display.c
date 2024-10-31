@@ -1,5 +1,6 @@
 #include "HAL9000.h"
 #include "display.h"
+#include "memory.h"
 
 #pragma pack(push,1)
 typedef struct _SCREEN_CHARACTER
@@ -258,6 +259,7 @@ DispSetCursor(
                        Color);
 }
 
+SAL_SUCCESS
 STATUS
 DispStoreBuffer(
     OUT_WRITES_BYTES(Size)  PVOID               Buffer,
@@ -274,6 +276,7 @@ DispStoreBuffer(
     return STATUS_SUCCESS;
 }
 
+SAL_SUCCESS
 STATUS
 DispRestoreBuffer(
     IN_READS_BYTES(Size)    PVOID               Buffer,

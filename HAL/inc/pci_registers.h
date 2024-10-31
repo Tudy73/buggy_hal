@@ -81,8 +81,6 @@ typedef enum _PCI_BRIDGE_SUBCLASS
 
 #pragma pack(push,1)
 
-#pragma warning(push)
-
 // warning C4214: nonstandard extension used: bit field types other than int
 #pragma warning(disable:4214)
 
@@ -123,7 +121,7 @@ STATIC_ASSERT(sizeof(PCI_BAR) == PREDEFINED_PCI_BAR_SIZE);
 
 typedef union _PCI_STATUS_REGISTER
 {
-    struct
+    struct  
     {
         WORD            __Reserved0         :   3;
         WORD            InterruptStatus     :   1;
@@ -136,7 +134,7 @@ STATIC_ASSERT(sizeof(PCI_STATUS_REGISTER) == PREDEFINED_PCI_STATUS_SIZE);
 
 typedef union _PCI_COMMAND_REGISTER
 {
-    struct
+    struct  
     {
         // Controls a device's response to I/O Space accesses. A value of 0
         // disables the device response.A value of 1 allows the device to
@@ -221,7 +219,7 @@ STATIC_ASSERT(sizeof(PCI_COMMAND_REGISTER) == PREDEFINED_PCI_COMMAND_SIZE);
 
 typedef union _PCI_HEADER_TYPE_REGISTER
 {
-    struct
+    struct  
     {
         // Bits 6 through 0 identify the layout of the
         // second part of the predefined header.The encoding 00h specifies
@@ -233,7 +231,7 @@ typedef union _PCI_HEADER_TYPE_REGISTER
         BYTE            Layout              :   7;
 
         // Bit 7 in this register is used to identify a multi - function device.
-        // If the bit is 0, then the device is single function. If the bit is 1,
+        // If the bit is 0, then the device is single function. If the bit is 1, 
         // then the device has multiple functions.
         BYTE            Multifunction       :   1;
     };
@@ -256,7 +254,7 @@ typedef BYTE PCI_CAPABILITY_ID;
 typedef struct _PCI_CAPABILITY_HEADER
 {
     PCI_CAPABILITY_ID           CapabilityId;
-
+   
     BYTE                        NextPointer;
 } PCI_CAPABILITY_HEADER, *PPCI_CAPABILITY_HEADER;
 STATIC_ASSERT(sizeof(PCI_CAPABILITY_HEADER) == PREDEFINED_PCI_CAPABILITY_HEADER_SIZE);
@@ -287,7 +285,7 @@ STATIC_ASSERT(sizeof(PCI_MSI_ADDRESS_REGISTER) == PREDEFINED_PCI_MSI_ADDRESS_REG
 
 typedef volatile union _PCI_MSI_DATA_REGISTER
 {
-    struct
+    struct  
     {
         BYTE        Vector;
 
@@ -305,7 +303,7 @@ typedef volatile struct _PCI_CAPABILITY_MSI
     PCI_CAPABILITY_HEADER               Header;
     union
     {
-        struct
+        struct  
         {
             // RW
             BYTE                        MsiEnable                   :   1;
@@ -333,7 +331,7 @@ typedef volatile struct _PCI_CAPABILITY_MSI
         {
             PCI_MSI_DATA_REGISTER       MessageData;
         } Capability32Bit;
-        struct
+        struct  
         {
             DWORD                       MessageAddressHigher;
             PCI_MSI_DATA_REGISTER       MessageData;
@@ -430,7 +428,7 @@ STATIC_ASSERT(sizeof(PCI_BRIDGE_HEADER) == PREDEFINED_PCI_BRIDGE_HEADER_SIZE);
 
 typedef volatile struct _PCI_COMMON_HEADER
 {
-    // PCI Specification 3.0 Section 6.1
+    // PCI Specification 3.0 Section 6.1 
     // The first 16 bytes are defined the same for all types of devices.
     WORD                            VendorID;
     WORD                            DeviceID;
@@ -459,5 +457,6 @@ typedef volatile struct _PCI_COMMON_HEADER
 } PCI_COMMON_HEADER, *PPCI_COMMON_HEADER;
 STATIC_ASSERT(sizeof(PCI_COMMON_HEADER) == PREDEFINED_PCI_COMMON_HEADER_SIZE);
 
-#pragma warning(pop)
+#pragma warning(default:4201)
+#pragma warning(default:4214)
 #pragma pack(pop)

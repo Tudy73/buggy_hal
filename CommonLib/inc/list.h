@@ -27,25 +27,19 @@
 //
 // Iteration is a typical situation where it is necessary to convert from a
 // LIST_ENTRY structure back to its enclosing structure. Here's an example
-// where the fooList is iterated and all the elements whose SomeData field
-// equal DataToSearch are deleted:
+// using fooList:
 //
-// LIST_ITERATOR it;
-// ListIteratorInit(&fooList, &it);
-//
-// PLIST_ENTRY pEntry;
-// while ((pEntry = ListIteratorNext(&it)) != NULL)
-// {
+// for (PLIST_ENTRY pEntry = fooList.Flink;
+//      pEntry != &fooList;
+//      pEntry = pEntry->Flink)
+//  {
 //      PFOO pFoo = CONTAINING_RECORD(pEntry, FOO, Element);
-//      if (pFoo->SomeData == DataToSearch) RemoveEntryList(pEntry);
-// }
+//  }
 //
 // The interface for this list is inspired by the LIST_ENTRY implementation
 // from Microsoft. If you're familiar with those LIST_ENTRY structures, you
 // should find this easy to use.
 //******************************************************************************
-
-C_HEADER_START
 
 #define INVALID_LIST_SIZE       MAX_DWORD
 
@@ -56,13 +50,6 @@ typedef struct _LIST_ENTRY
     struct _LIST_ENTRY*     Blink;
 } LIST_ENTRY, *PLIST_ENTRY;
 #pragma pack(pop)
-
-typedef struct _LIST_ITERATOR
-{
-    PLIST_ENTRY                 ListHead;
-
-    PLIST_ENTRY                 CurrentEntry;
-} LIST_ITERATOR, *PLIST_ITERATOR;
 
 typedef
 STATUS
@@ -86,8 +73,7 @@ typedef
 INT64
 (__cdecl FUNC_CompareFunction) (
     IN      PLIST_ENTRY     FirstElem,
-    IN      PLIST_ENTRY     SecondElem,
-    IN_OPT  PVOID           Context
+    IN      PLIST_ENTRY     SecondElem
     );
 
 typedef FUNC_CompareFunction*   PFUNC_CompareFunction;
@@ -158,7 +144,7 @@ RemoveHeadList(
     );
 
 //******************************************************************************
-// Function:     RemoveTailList
+// Function:     RemoveHeadList
 // Description:  Removes the tail of the linked list
 // Returns:      PLIST_ENTRY - pointer to the entry removed; If the list was
 //               empty it returns a pointer to the list head
@@ -208,8 +194,7 @@ void
 InsertOrderedList(
     INOUT   PLIST_ENTRY             ListHead,
     INOUT   PLIST_ENTRY             Entry,
-    IN      PFUNC_CompareFunction   CompareFunction,
-    IN_OPT  PVOID                   Context
+    IN      PFUNC_CompareFunction   CompareFunction
     );
 
 //******************************************************************************
@@ -276,19 +261,5 @@ PLIST_ENTRY
 ListSearchForElement(
     IN      PLIST_ENTRY             ListHead,
     IN      PLIST_ENTRY             ElementToSearchFor,
-    IN      BOOLEAN                 IsListOrdered,
-    IN      PFUNC_CompareFunction   CompareFunction,
-    IN_OPT  PVOID                   Context
+    IN      PFUNC_CompareFunction   CompareFunction
     );
-
-void
-ListIteratorInit(
-    IN      PLIST_ENTRY         List,
-    OUT     PLIST_ITERATOR      ListIterator
-    );
-
-PLIST_ENTRY
-ListIteratorNext(
-    INOUT   PLIST_ITERATOR      ListIterator
-    );
-C_HEADER_END

@@ -3,6 +3,7 @@
 #include "ata_dispatch.h"
 #include "ata_operations.h"
 
+SAL_SUCCESS
 STATUS
 (__cdecl AtaDriverEntry)(
     INOUT       PDRIVER_OBJECT      Driver
@@ -44,7 +45,6 @@ STATUS
         LOG_FUNC_ERROR("IoGetPciDevicesMatchingClassAndSubclass", status);
         return status;
     }
-    ASSERT(noOfDevices == 0 || pPciDevices != NULL);
     LOGL("Found %d IDE devices\n", noOfDevices );
 
     Driver->DispatchFunctions[IRP_MJ_READ] = AtaDispatchReadWrite;
@@ -54,7 +54,6 @@ STATUS
     // lets try to initialize the device
     for (i = 0; i < noOfDevices; ++i)
     {
-        ASSERT(pPciDevices[i] != NULL);
 
         for (j = 0; j < 2; ++j)
         {

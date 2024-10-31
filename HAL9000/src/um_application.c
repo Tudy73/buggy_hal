@@ -57,7 +57,7 @@ UmApplicationRetrieveHeader(
                                                       &peSize);
         if (!SUCCEEDED(status))
         {
-            LOG_TRACE_USERMODE("[ERROR]_UmApplicationReadExecutableContents failed with status 0x%x", status);
+            LOG_FUNC_ERROR("_UmApplicationReadExecutableContents", status);
             __leave;
         }
 
@@ -195,7 +195,7 @@ _UmApplicationReadExecutableContents(
                               FALSE);
         if (!SUCCEEDED(status))
         {
-            LOG_TRACE_USERMODE("[ERROR] IoCreateFile with status 0x%x\n", status);
+            LOG_FUNC_ERROR("IoCreateFile", status);
             __leave;
         }
 

@@ -51,7 +51,7 @@ __main(
     {
         if (pAllocatedAddress != NULL)
         {
-            status = SyscallVirtualFree((PVOID)pAllocatedAddress, 0, VMM_FREE_TYPE_RELEASE);
+            status = SyscallVirtualFree((PVOID)pAllocatedAddress, 0, VMM_FREE_TYPE_DECOMMIT | VMM_FREE_TYPE_RELEASE);
             if (!SUCCEEDED(status))
             {
                 LOG_FUNC_ERROR("SyscallVirtualFree", status);

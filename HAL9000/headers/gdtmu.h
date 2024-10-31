@@ -46,14 +46,6 @@ GdtMuRetrieveSelectorIndex(
     IN      SEL_TYPE        Type
     );
 
-void
-GdtMuReload(
-    IN          WORD            CodeSelector,
-    IN          WORD            DataSelector,
-    IN          BOOLEAN         PreserveGsBase,
-    IN          BOOLEAN         PreserveFsBase
-    );
-
 #define GdtMuGetCS64Supervisor()        GdtMuRetrieveSelectorIndex(SelPrivillegeSupervisor, SelOpMode64, SelTypeCode)
 #define GdtMuGetDS64Supervisor()        GdtMuRetrieveSelectorIndex(SelPrivillegeSupervisor, SelOpMode64, SelTypeData)
 #define GdtMuGetCS32Supervisor()        GdtMuRetrieveSelectorIndex(SelPrivillegeSupervisor, SelOpMode32, SelTypeCode)

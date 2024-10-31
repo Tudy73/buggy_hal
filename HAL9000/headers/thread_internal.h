@@ -35,8 +35,6 @@ typedef struct _THREAD
 {
     REF_COUNT               RefCnt;
 
-    struct _THREAD          *Self;
-
     TID                     Id;
     char*                   Name;
 
@@ -252,13 +250,12 @@ ThreadExecuteForEachThreadEntry(
     IN_OPT  PVOID               Context
     );
 
-
-//******************************************************************************O
+//******************************************************************************
 // Function:     GetCurrentThread
 // Description:  Returns the running thread.
 // Returns:      void
 //******************************************************************************
-#define GetCurrentThread()      ((THREAD*)__HALreadfsqword(FIELD_OFFSET(THREAD, Self)))
+#define GetCurrentThread()      ((THREAD*)__readmsr(IA32_FS_BASE_MSR))
 
 //******************************************************************************
 // Function:     SetCurrentThread

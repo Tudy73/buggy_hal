@@ -143,7 +143,7 @@
 #define     IA32_PEBS_ENABLE                        0x000003F1
 
 //
-//
+// 
 // VMX based MSR's
 //
 //
@@ -291,8 +291,6 @@
 
 #pragma pack(push,1)
 
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 
@@ -308,7 +306,8 @@ typedef union _IA32_STAR_MSR_DATA
 } IA32_STAR_MSR_DATA, *PIA32_STAR_MSR_DATA;
 STATIC_ASSERT(sizeof(IA32_STAR_MSR_DATA) == MSR_DATA_SIZE);
 
-#pragma warning(pop)
+#pragma warning(default:4201)
+
 #pragma pack(pop)
 
 #define     IA32_STAR                           0xC0000081

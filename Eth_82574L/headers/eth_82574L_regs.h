@@ -4,8 +4,6 @@
 
 #pragma pack(push,1)
 
-#pragma warning(push)
-
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable:4201)
 
@@ -19,14 +17,14 @@
 // 0x04 - RW
 typedef union _DEVICE_CONTROL_REGISTER
 {
-    struct
+    struct  
     {
         DWORD               FullDuplex                      : 1;
 
         DWORD               __Reserved0                     : 1;
 
         DWORD               GIOMasterDisable                : 1;
-
+        
         DWORD               __Reserved1                     : 2;
 
         DWORD               AutoSpeedDetectionEnable        : 1;
@@ -103,7 +101,7 @@ STATIC_ASSERT(sizeof(DEVICE_STATUS_REGISTER) == ETH_INTERNAL_REG_SIZE);
 // 0xC0 - RC/WC
 typedef union _INT_CAUSE_READ_REGISTER
 {
-    struct
+    struct  
     {
         // Set when hardware processes a descriptor with RS set. If using
         // delayed interrupts(IDE set), the interrupt is delayed until after one of
@@ -152,7 +150,7 @@ STATIC_ASSERT(sizeof(INT_CAUSE_READ_REGISTER) == ETH_INTERNAL_REG_SIZE);
 // 0xD0 - RW
 typedef union _INT_MASK_SET_REGISTER
 {
-    struct
+    struct  
     {
         // Sets the mask for transmit descriptor written back.
         DWORD               TdWrittenBack                   : 1;
@@ -221,7 +219,7 @@ STATIC_ASSERT(sizeof(INT_MASK_SET_REGISTER) == ETH_INTERNAL_REG_SIZE);
 // 0xD8 - W
 typedef union _INT_MASK_CLEAR_REGISTER
 {
-    struct
+    struct  
     {
         // Clears the mask for transmit descriptor written back.
         DWORD               TdWrittenBack                   : 1;
@@ -297,7 +295,7 @@ typedef union _INT_MASK_CLEAR_REGISTER
 // 0x100 - RW
 typedef union _RECEIVE_CONTROL_REGISTER
 {
-    struct
+    struct  
     {
         DWORD               __Reserved0                     : 1;
 
@@ -311,7 +309,7 @@ typedef union _RECEIVE_CONTROL_REGISTER
         DWORD               UnicastPromiscuousEnable        : 1;
 
         DWORD               MulticastPromiscuousEnable      : 1;
-
+        
         DWORD               LongPacketEnable                : 1;
 
         // Should always be set to 00b
@@ -355,7 +353,7 @@ typedef union _RECEIVE_CONTROL_REGISTER
         DWORD               VlanFilterEnable                : 1;
 
         DWORD               CanonicalFormIndicatorEnable    : 1;
-
+        
         DWORD               CanonicalFormIndiicatorValue    : 1;
 
         DWORD               __Reserved2                     : 1;
@@ -387,7 +385,7 @@ STATIC_ASSERT(sizeof(RECEIVE_CONTROL_REGISTER) == ETH_INTERNAL_REG_SIZE);
 // 0x2800 - RW
 typedef union _RD_BASE_ADDRESS_LOW
 {
-    struct
+    struct  
     {
         DWORD                   __Ignored0                      :  4;
 
@@ -423,13 +421,13 @@ STATIC_ASSERT(sizeof(RD_LENGTH) == ETH_INTERNAL_REG_SIZE);
 // 0x2810 - RW
 typedef union _RD_HEAD
 {
-    struct
+    struct  
     {
         // This register contains the head pointer for the receive descriptor buffer.The register
         // points to a 16 - byte datum.Hardware controls the pointer.The only time that software
         // should write to this register is after a reset(hardware reset or CTRL.RST) and before
         // enabling the receive function(RCTL.EN).
-        /// ATTENTION: If software were to write to this register while the receive function was
+        /// ATTENTION: If software were to write to this register while the receive function was 
         /// enabled, the on - chip descriptor buffers might be invalidated and the hardware
         /// could be become unstable.
         WORD                    Head;
@@ -523,7 +521,7 @@ STATIC_ASSERT(sizeof(TRANSMIT_INTERRUPT_ABSOLUTE_DELAY_TIMER) == ETH_INTERNAL_RE
 // 0x5008 - RW
 typedef union _RECEIVE_FILTER_CONTROL_REGISTER
 {
-    struct
+    struct 
     {
         // Disable the iSCSI filtering.
         DWORD                   IScsiDisable                    :  1;
@@ -656,7 +654,7 @@ STATIC_ASSERT(sizeof(TRANSMIT_CONTROL_REGISTER) == ETH_INTERNAL_REG_SIZE);
 // 0x3800 - RW
 typedef union _TD_BASE_ADDRESS_LOW
 {
-    struct
+    struct  
     {
         DWORD                   __Ignored0                      :  4;
 
@@ -677,13 +675,13 @@ STATIC_ASSERT(sizeof(TD_BASE_ADDRESS_HIGH) == ETH_INTERNAL_REG_SIZE);
 // 0x3808 - RW
 typedef union _TD_LENGTH
 {
-    struct
+    struct  
     {
         // Number of bytes allocated for descriptors in the circular descriptor
         // buffer.It must be 128 - byte aligned.
         DWORD                   Length                          : 20;
 
-        DWORD                   __Reserved0                     : 12;
+        DWORD                   __Reserved0                     : 12;      
     };
     DWORD                       Raw;
 } TD_LENGTH, *PTD_LENGTH;
@@ -692,7 +690,7 @@ STATIC_ASSERT(sizeof(TD_LENGTH) == ETH_INTERNAL_REG_SIZE);
 // 0x3810 - RW
 typedef union _TD_HEAD
 {
-    struct
+    struct  
     {
         // This register contains the head pointer for the transmit descriptor ring.It points to a
         // 16 - byte datum.Hardware controls this pointer.The only time that software should
@@ -723,5 +721,6 @@ typedef union _TD_TAIL
 } TD_TAIL, *PTD_TAIL;
 STATIC_ASSERT(sizeof(TD_TAIL) == ETH_INTERNAL_REG_SIZE);
 
-#pragma warning(pop)
+#pragma warning(default:4214)
+#pragma warning(default:4201)
 #pragma pack(pop)

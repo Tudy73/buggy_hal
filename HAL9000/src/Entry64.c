@@ -17,8 +17,6 @@
 #include "keyboard.h"
 #endif
 
-int _fltused = 1;
-
 void
 Entry64(
     IN  int                 argc,
@@ -28,8 +26,7 @@ Entry64(
     STATUS status;
     COMMON_LIB_INIT initSettings;
 
-    // We don't have commonlib support yet, as a result we have no way of asserting at this point
-    if (!IS_STACK_ALIGNED) __halt();
+    CHECK_STACK_ALIGNMENT;
 
     status = STATUS_SUCCESS;
     memzero(&initSettings, sizeof(COMMON_LIB_INIT));

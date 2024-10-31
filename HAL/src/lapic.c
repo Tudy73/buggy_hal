@@ -66,7 +66,7 @@ LapicSetLogicalApicId(
     ASSERT (NULL != pLapic);
 
     memzero(&ldrRegister, sizeof(LDR_REGISTER));
-
+    
     dfrRegister.Raw = MAX_DWORD;
     dfrRegister.Model = DestinationFormat;
 
@@ -133,11 +133,11 @@ LapicSendEOI(
 void
 LapicSendIpi(
     IN      PVOID                           ApicBaseAddress,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_ID                         ApicId,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_DELIVERY_MODE              DeliveryMode,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_DESTINATION_SHORTHAND      DestinationShorthand,
     IN      _Strict_type_match_
             APIC_DESTINATION_MODE           DestinationMode,
@@ -201,7 +201,7 @@ LapicGetTimerCount(
     pLapic = (PLAPIC)ApicBaseAddress;
 
     ASSERT(NULL != pLapic);
-
+    
     return pLapic->TimerCurrentCount.Value;
 }
 
@@ -209,7 +209,7 @@ void
 LapicConfigureTimer(
     IN      PVOID                           ApicBaseAddress,
     IN      BYTE                            TimerInterruptVector,
-    IN      _Strict_type_match_
+    IN      _Strict_type_match_ 
             APIC_DIVIDE_VALUE               DivideValue
     )
 {
@@ -239,7 +239,7 @@ LapicConfigureTimer(
 }
 
 void
-LapicSetTimerInterval(
+LapicEnableTimer(
     IN      PVOID                           ApicBaseAddress,
     IN      DWORD                           TimerCount
     )
@@ -260,11 +260,11 @@ LapicConfigureLvtRegisters(
     )
 {
     PLAPIC pLapic;
-
+    
     pLapic = (PLAPIC)ApicBaseAddress;
 
     ASSERT(NULL != pLapic);
-
+    
     // configure LINT vectors
     _LapicConfigureLocalInts(pLapic);
 

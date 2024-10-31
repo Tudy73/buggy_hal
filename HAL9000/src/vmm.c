@@ -24,47 +24,6 @@ typedef struct _VMM_DATA
     BYTE                    UncacheableIndex;
 } VMM_DATA, *PVMM_DATA;
 
-typedef
-BOOLEAN
-(__cdecl FUNC_PageWalkCallback)(
-    IN      PML4                    Cr3,
-    IN      PVOID                   PageTable,
-    IN      PVOID                   VirtualAddress,
-    IN      BYTE                    PageLevel,
-    IN_OPT  PVOID                   Context
-    );
-
-typedef FUNC_PageWalkCallback *PFUNC_PageWalkCallback;
-
-typedef struct _VMM_MAP_UNMAP_PAGE_WALK_CONTEXT
-{
-    // These fields are valid only when mapping memory in _VmMapPage
-    PPAGING_DATA                    PagingData;
-    PHYSICAL_ADDRESS                PhysicalAddressBase;
-    PVOID                           VirtualAddressBase;
-
-    PAGE_RIGHTS                     PageRights;
-    BOOLEAN                         Invalidate;
-    BOOLEAN                         Uncacheable;
-
-    // Valid only when unmapping memory in _VmUnmapPage;
-    BOOLEAN                         ReleaseMemory;
-} VMM_MAP_UNMAP_PAGE_WALK_CONTEXT, *PVMM_MAP_UNMAP_PAGE_WALK_CONTEXT;
-
-// Used when determining the physical address, a/d bits and when resetting them
-typedef struct _VMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT
-{
-    PHYSICAL_ADDRESS                PhysicalAddress;
-
-    // Returns the values of the A/D bits
-    BOOLEAN                         Accessed;
-    BOOLEAN                         Dirty;
-
-    // When set clears the A/D bits
-    BOOLEAN                         ClearAccessed;
-    BOOLEAN                         ClearDirty;
-} VMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT, *PVMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT;
-
 static VMM_DATA m_vmmData;
 
 static
@@ -82,20 +41,6 @@ _VmDeterminePatIndices(
     OUT     PBYTE                   WbIndex,
     OUT     PBYTE                   UcIndex
     );
-
-static
-void
-_VmWalkPagingTables(
-    IN      PML4                        Cr3,
-    IN      PVOID                       BaseAddress,
-    IN      QWORD                       Size,
-    IN      PFUNC_PageWalkCallback      WalkCallback,
-    IN_OPT  PVOID                       Context
-    );
-
-static FUNC_PageWalkCallback            _VmMapPage;
-static FUNC_PageWalkCallback            _VmUnmapPage;
-static FUNC_PageWalkCallback            _VmRetrievePhyAccess;
 
 __forceinline
 static
@@ -254,27 +199,94 @@ VmmMapMemoryInternal(
     IN      BOOLEAN                 Uncacheable
     )
 {
-    VMM_MAP_UNMAP_PAGE_WALK_CONTEXT ctx = { 0 };
-    PML4 cr3;
+    PML4_ENTRY* pml4Entries;
+    PDPT_ENTRY_PD* pdptEntries;
+    PD_ENTRY_PT* pdEntries;
+    PT_ENTRY* ptEntries;
+
+    WORD pageOffset;
+    WORD pteOffset;
+    WORD pdeOffset;
+    WORD pdpteOffset;
+    WORD pml4Offset;
+
+    QWORD offset;
+    PVOID tempAddress;
 
     ASSERT(PagingData != NULL);
     ASSERT(IsAddressAligned(PhysicalAddress, PAGE_SIZE));
     ASSERT(0 != Size && IsAddressAligned(Size, PAGE_SIZE));
 
-    ctx.PagingData = PagingData;
-    ctx.PhysicalAddressBase = PhysicalAddress;
-    ctx.VirtualAddressBase = BaseAddress;
-    ctx.PageRights = PageRights;
-    ctx.Invalidate = Invalidate;
-    ctx.Uncacheable = Uncacheable;
+    // we may need to map multiple pages => we iterate until we map all the
+    // addresses
+    for(offset = 0;
+        offset < Size;
+        offset = offset + PAGE_SIZE)
+    {
+        // address to map
+        tempAddress = (PBYTE)BaseAddress + offset;
 
-    cr3.Raw = (QWORD) PagingData->BasePhysicalAddress;
+        // these are the offsets to the corresponding structures
+        pml4Offset = MASK_PML4_OFFSET(tempAddress);
+        pdpteOffset = MASK_PDPTE_OFFSET(tempAddress);
+        pdeOffset = MASK_PDE_OFFSET(tempAddress);
+        pteOffset = MASK_PTE_OFFSET(tempAddress);
+        pageOffset = MASK_PAGE_OFFSET(tempAddress);
 
-    _VmWalkPagingTables(cr3,
-                        BaseAddress,
-                        Size,
-                        _VmMapPage,
-                        &ctx);
+        pml4Entries = (PML4_ENTRY*)PA2VA(PagingData->BasePhysicalAddress);
+        pml4Entries = &(pml4Entries[pml4Offset]);
+
+        if (!PteIsPresent(pml4Entries))
+        {
+            _VmSetupPagingStructure(PagingData, pml4Entries);
+        }
+
+        tempAddress = PteGetPhysicalAddress(pml4Entries);
+        pdptEntries = (PDPT_ENTRY_PD*)PA2VA(tempAddress);
+
+        pdptEntries = &(pdptEntries[pdpteOffset]);
+
+        if (!PteIsPresent(pdptEntries))
+        {
+            _VmSetupPagingStructure(PagingData, pdptEntries);
+        }
+
+        ASSERT(0 == pdptEntries->PageSize);
+
+        tempAddress = PteGetPhysicalAddress(pdptEntries);
+        pdEntries = (PD_ENTRY_PT*)PA2VA(tempAddress);
+
+        pdEntries = &(pdEntries[pdeOffset]);
+        if (!PteIsPresent(pdEntries))
+        {
+            _VmSetupPagingStructure(PagingData, pdEntries);
+        }
+
+        ASSERT(0 == pdEntries->PageSize);
+
+        tempAddress = PteGetPhysicalAddress(pdEntries);
+        ptEntries = (PT_ENTRY*)PA2VA(tempAddress);
+
+
+        ptEntries = &(ptEntries[pteOffset]);
+
+        // if we must invalidate the entry or the entry is not present, map it
+        if (Invalidate || (!PteIsPresent(ptEntries)))
+        {
+            PHYSICAL_ADDRESS physAddr = (PHYSICAL_ADDRESS)((PBYTE)PhysicalAddress + offset);
+            PTE_MAP_FLAGS flags = { 0 };
+
+            flags.Executable = IsBooleanFlagOn(PageRights, PAGE_RIGHTS_EXECUTE);
+            flags.Writable = IsBooleanFlagOn(PageRights, PAGE_RIGHTS_WRITE);
+            flags.PatIndex = Uncacheable ? m_vmmData.UncacheableIndex : m_vmmData.WriteBackIndex;
+            flags.GlobalPage = PagingData->KernelSpace;
+            flags.UserAccess = !PagingData->KernelSpace;
+
+            PteMap(ptEntries, physAddr, flags );
+
+            __invlpg((PBYTE) BaseAddress + offset );
+        }
+    }
 }
 
 void
@@ -285,7 +297,19 @@ VmmUnmapMemoryEx(
     IN      BOOLEAN                 ReleaseMemory
     )
 {
-    VMM_MAP_UNMAP_PAGE_WALK_CONTEXT ctx = { 0 };
+    PML4_ENTRY* pml4Entries;
+    PDPT_ENTRY_PD* pdptEntries;
+    PD_ENTRY_PT* pdEntries;
+    PT_ENTRY* ptEntries;
+
+    WORD pageOffset;
+    WORD pteOffset;
+    WORD pdeOffset;
+    WORD pdpteOffset;
+    WORD pml4Offset;
+
+    QWORD offset;
+    PVOID tempAddress;
 
     if ((NULL == VirtualAddress) || (!IsAddressAligned(VirtualAddress, PAGE_SIZE)))
     {
@@ -297,50 +321,175 @@ VmmUnmapMemoryEx(
         return;
     }
 
-    ctx.ReleaseMemory = ReleaseMemory;
+    offset = 0;
 
-    _VmWalkPagingTables(Cr3,
-                        VirtualAddress,
-                        Size,
-                        _VmUnmapPage,
-                        &ctx);
+    // we may need to map multiple pages => we iterate until we map all the
+    // addresses
+    for(offset = 0;
+        offset < Size;
+        offset = offset + PAGE_SIZE)
+    {
+        // address to ummap
+        tempAddress = (PVOID)((BYTE*)VirtualAddress + offset);
+
+        // these are the offsets to the corresponding structures
+        pml4Offset = MASK_PML4_OFFSET(tempAddress);
+        pdpteOffset = MASK_PDPTE_OFFSET(tempAddress);
+        pdeOffset = MASK_PDE_OFFSET(tempAddress);
+        pteOffset = MASK_PTE_OFFSET(tempAddress);
+        pageOffset = MASK_PAGE_OFFSET(tempAddress);
+
+        pml4Entries = (PML4_ENTRY*)PA2VA(Cr3.Pcide.PhysicalAddress << SHIFT_FOR_PHYSICAL_ADDR);
+        pml4Entries = &(pml4Entries[pml4Offset]);
+
+        if (!PteIsPresent(pml4Entries))
+        {
+            // it was never allocated
+            // go to next PAGE
+            continue;
+        }
+
+        tempAddress = PteGetPhysicalAddress(pml4Entries);
+        pdptEntries = (PDPT_ENTRY_PD*)PA2VA(tempAddress);
+
+        pdptEntries = &(pdptEntries[pdpteOffset]);
+
+        if (!PteIsPresent(pdptEntries))
+        {
+            // it was never allocated
+            // go to next PAGE
+            continue;
+        }
+
+        ASSERT(0 == pdptEntries->PageSize);
+
+        tempAddress = PteGetPhysicalAddress(pdptEntries);
+        pdEntries = (PD_ENTRY_PT*)PA2VA(tempAddress);
+
+        pdEntries = &(pdEntries[pdeOffset]);
+        if (!PteIsPresent(pdEntries))
+        {
+            // it was never allocated
+            // go to next PAGE
+            continue;
+        }
+
+        ASSERT(0 == pdEntries->PageSize);
+
+        tempAddress = PteGetPhysicalAddress(pdEntries);
+        ptEntries = (PT_ENTRY*)PA2VA(tempAddress);
+
+
+        ptEntries = &(ptEntries[pteOffset]);
+
+        if (!PteIsPresent(ptEntries))
+        {
+            // it was never allocated
+            // go to next PAGE
+            continue;
+        }
+        else
+        {
+            PHYSICAL_ADDRESS pa = PteGetPhysicalAddress(ptEntries);
+
+            PteUnmap(ptEntries);
+
+            __invlpg((QWORD)VirtualAddress + offset);
+
+            if (ReleaseMemory)
+            {
+                MmuReleaseMemory(pa, 1);
+            }
+
+            /// TODO: signal other processors to invalidate the mapping
+        }
+    }
 }
 
 PTR_SUCCESS
 PHYSICAL_ADDRESS
-VmmGetPhysicalAddressEx(
+VmmGetPhysicalAddress(
     IN      PML4                    Cr3,
-    IN      PVOID                   VirtualAddress,
-    OUT_OPT BOOLEAN*                Accessed,
-    OUT_OPT BOOLEAN*                Dirty
+    IN      PVOID                   VirtualAddress
     )
 {
-    VMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT ctx = { 0 };
+    PML4_ENTRY* pml4Entries;
+    PDPT_ENTRY_PD* pdptEntries;
+    PD_ENTRY_PT* pdEntries;
+    PT_ENTRY* ptEntries;
 
-    ASSERT(NULL != VirtualAddress);
-    ASSERT(IsAddressAligned(VirtualAddress, PAGE_SIZE));
+    WORD pageOffset;
+    WORD pteOffset;
+    WORD pdeOffset;
+    WORD pdpteOffset;
+    WORD pml4Offset;
 
-    ctx.ClearAccessed = Accessed != NULL;
-    ctx.ClearDirty = Dirty != NULL;
+    PVOID tempAddress;
 
-    _VmWalkPagingTables(Cr3,
-                        VirtualAddress,
-                        PAGE_SIZE,
-                        _VmRetrievePhyAccess,
-                        &ctx
-                        );
+    ASSERT( NULL != VirtualAddress );
+    ASSERT( IsAddressAligned(VirtualAddress, PAGE_SIZE));
 
-    if (Accessed != NULL)
+    tempAddress = VirtualAddress;
+
+    // these are the offsets to the corresponding structures
+    pml4Offset = MASK_PML4_OFFSET(tempAddress);
+    pdpteOffset = MASK_PDPTE_OFFSET(tempAddress);
+    pdeOffset = MASK_PDE_OFFSET(tempAddress);
+    pteOffset = MASK_PTE_OFFSET(tempAddress);
+    pageOffset = MASK_PAGE_OFFSET(tempAddress);
+
+    pml4Entries = (PML4_ENTRY*)PA2VA(Cr3.Pcide.PhysicalAddress << SHIFT_FOR_PHYSICAL_ADDR);
+    pml4Entries = &(pml4Entries[pml4Offset]);
+
+    if (!PteIsPresent(pml4Entries))
     {
-        *Accessed = ctx.Accessed;
+        // it was never allocated
+        return NULL;
     }
 
-    if (Dirty != NULL)
+    tempAddress = PteGetPhysicalAddress(pml4Entries);
+    pdptEntries = (PDPT_ENTRY_PD*)PA2VA(tempAddress);
+
+    pdptEntries = &(pdptEntries[pdpteOffset]);
+
+    if (!PteIsPresent(pdptEntries))
     {
-        *Dirty = ctx.Dirty;
+        // it was never allocated
+        return NULL;
     }
 
-    return ctx.PhysicalAddress;
+    ASSERT(0 == pdptEntries->PageSize);
+
+    tempAddress = PteGetPhysicalAddress(pdptEntries);
+    pdEntries = (PD_ENTRY_PT*)PA2VA(tempAddress);
+
+    pdEntries = &(pdEntries[pdeOffset]);
+    if (!PteIsPresent(pdEntries))
+    {
+        // it was never allocated
+        return NULL;
+    }
+
+    if (pdEntries->PageSize)
+    {
+        // Large 2MB page
+        return PtrOffset(PteLargePageGetPhysicalAddress(pdEntries),AddressOffset(VirtualAddress, PAGE_2MB_OFFSET + 1));
+    }
+
+    tempAddress = PteGetPhysicalAddress(pdEntries);
+    ptEntries = (PT_ENTRY*)PA2VA(tempAddress);
+
+
+    ptEntries = &(ptEntries[pteOffset]);
+
+    if (!PteIsPresent(ptEntries))
+    {
+        // it was never allocated
+        // go to next PAGE
+        return NULL;
+    }
+
+    return PteGetPhysicalAddress(ptEntries);
 }
 
 _No_competing_thread_
@@ -382,6 +531,7 @@ VmmSetupPageTables(
     IN      BOOLEAN                 KernelStructures
     )
 {
+    STATUS status;
     DWORD sizeReservedForPagingStructures;
     PVOID pBaseVirtualAddress;
 
@@ -390,16 +540,17 @@ VmmSetupPageTables(
     ASSERT(BasePhysicalAddress != NULL);
     ASSERT(FramesReserved != 0);
 
+    status = STATUS_SUCCESS;
+    sizeReservedForPagingStructures = 0;
     pBaseVirtualAddress = (PVOID) PA2VA(BasePhysicalAddress);
-
-    ASSERT(FramesReserved <= MAX_DWORD / PAGE_SIZE);
-    sizeReservedForPagingStructures = FramesReserved * PAGE_SIZE;
 
     // Current index should start at 1 because at 0 we have the CR3 (PML4 table address)
     PagingData->CurrentIndex = 1;
     PagingData->NumberOfFrames = FramesReserved;
     PagingData->BasePhysicalAddress = BasePhysicalAddress;
     PagingData->KernelSpace = KernelStructures;
+
+    sizeReservedForPagingStructures = FramesReserved * PAGE_SIZE;
 
     LOG_TRACE_VMM("Will setup paging tables at physical address: 0x%X\n", PagingData->BasePhysicalAddress);
     LOG_TRACE_VMM("BaseAddress: 0x%X\n", pBaseVirtualAddress);
@@ -429,7 +580,7 @@ VmmSetupPageTables(
         memzero(pBaseVirtualAddress, PAGE_SIZE);
     }
 
-    return STATUS_SUCCESS;
+    return status;
 }
 
 void
@@ -536,9 +687,6 @@ VmmAllocRegionEx(
     // If the MDL is non-NULL we must have the VMM_ALLOC_TYPE_NOT_LAZY set,
     // we don't have an implementation for allocating a VA lazily for memory ranges described by a MDL
     ASSERT(Mdl == NULL || IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_NOT_LAZY));
-
-    // We currently do not support mapping zero pages
-    ASSERT(!IsBooleanFlagOn(AllocType, VMM_ALLOC_TYPE_ZERO));
 
     // We cannot have both the Mdl and the FileObject non-NULL, the region either is already backed up by some physical
     // frames or it is backed up by a file, or it is not backed up by anything
@@ -997,7 +1145,7 @@ VmmIsBufferValid(
     if (!KernelAccess && _VmIsKernelRange(Buffer, BufferSize))
     {
         // We shouldn't be accessing from UM kernel buffers :)
-        LOG_TRACE_VMM("Usermode code should not be accessing kernel memory between 0x%X -> 0x%X\n",
+        LOG_ERROR("Usermode code should not be accessing kernel memory between 0x%X -> 0x%X\n",
                   BufferSize, PtrOffset(BufferSize, BufferSize - 1));
         return STATUS_MEMORY_PREVENTS_USERMODE_ACCESS;
     }
@@ -1045,7 +1193,7 @@ _VmSetupPagingStructure(
     // for paging structure PA2VA can always be used :)
     PteMap(PagingStructure, physicalAddr, flags);
 
-    PageInvalidateTlb((PVOID)PA2VA(physicalAddr));
+    __invlpg((PVOID)PA2VA(physicalAddr));
 
     // Zero the current paging structure entry => we cannot get stray memory accesses
     memzero((PVOID)PA2VA(physicalAddr), PAGE_SIZE);
@@ -1091,283 +1239,4 @@ _VmDeterminePatIndices(
     }
 
     return bFoundWb && bFoundUc;
-}
-
-static
-void
-_VmWalkPagingTables(
-    IN      PML4                        Cr3,
-    IN      PVOID                       BaseAddress,
-    IN      QWORD                       Size,
-    IN      PFUNC_PageWalkCallback      WalkCallback,
-    IN_OPT  PVOID                       Context
-    )
-{
-    // we may need to map multiple pages => we iterate until we map all the
-    // addresses
-    for(QWORD offset = 0;
-        offset < Size;
-        offset = offset + PAGE_SIZE)
-    {
-        WORD offsets[4];
-        BOOLEAN bContinue;
-        PVOID currentVa;
-        PHYSICAL_ADDRESS curStructPa;
-
-        // address to map
-        currentVa = PtrOffset(BaseAddress, offset);
-
-        offsets[0] = MASK_PML4_OFFSET(currentVa);
-        offsets[1] = MASK_PDPTE_OFFSET(currentVa);
-        offsets[2] = MASK_PDE_OFFSET(currentVa);
-        offsets[3] = MASK_PTE_OFFSET(currentVa);
-
-        bContinue = FALSE;
-
-        curStructPa = (PHYSICAL_ADDRESS)(Cr3.Pcide.PhysicalAddress << SHIFT_FOR_PHYSICAL_ADDR);
-
-        for (BYTE i = PAGING_TABLES_FIRST_LEVEL;
-             i <= PAGING_TABLES_LAST_LEVEL;
-             ++i)
-        {
-            PT_ENTRY* pCurrentEntry;
-
-            pCurrentEntry = (PT_ENTRY*)PA2VA(curStructPa);
-
-            pCurrentEntry = &(pCurrentEntry[offsets[i-1]]);
-
-            if (!WalkCallback(Cr3,
-                              pCurrentEntry,
-                              currentVa,
-                              i,
-                              Context))
-            {
-                bContinue = TRUE;
-                break;
-            }
-
-            if (i != PAGING_TABLES_LAST_LEVEL)
-            {
-                ASSERT(((PD_ENTRY_PT*)pCurrentEntry)->PageSize == 0);
-            }
-
-            curStructPa = PteGetPhysicalAddress(pCurrentEntry);
-        }
-
-        if (bContinue)
-        {
-            continue;
-        }
-    }
-}
-
-static
-BOOLEAN
-(__cdecl _VmMapPage)(
-    IN      PML4                    Cr3,
-    IN      PVOID                   PageTable,
-    IN      PVOID                   VirtualAddress,
-    IN      BYTE                    PageLevel,
-    IN_OPT  PVOID                   Context
-    )
-{
-    PVMM_MAP_UNMAP_PAGE_WALK_CONTEXT pPageContext;
-
-    UNREFERENCED_PARAMETER(Cr3);
-
-    ASSERT(PageTable != NULL);
-    ASSERT(VirtualAddress != NULL);
-    ASSERT(PAGING_TABLES_FIRST_LEVEL <= PageLevel && PageLevel <= PAGING_TABLES_LAST_LEVEL);
-
-    pPageContext = (PVMM_MAP_UNMAP_PAGE_WALK_CONTEXT) Context;
-    ASSERT(pPageContext != NULL);
-
-    if (PteIsPresent(PageTable) &&
-        !((PageLevel == PAGING_TABLES_LAST_LEVEL) && pPageContext->Invalidate))
-    {
-        return TRUE;
-    }
-
-    if (PageLevel == PAGING_TABLES_LAST_LEVEL)
-    {
-        PHYSICAL_ADDRESS physAddr = (PHYSICAL_ADDRESS)(PtrOffset(pPageContext->PhysicalAddressBase,
-                                                       PtrDiff(VirtualAddress, pPageContext->VirtualAddressBase)));
-        PTE_MAP_FLAGS flags = { 0 };
-
-        flags.Executable = IsBooleanFlagOn(pPageContext->PageRights, PAGE_RIGHTS_EXECUTE);
-        flags.Writable = IsBooleanFlagOn(pPageContext->PageRights, PAGE_RIGHTS_WRITE);
-        flags.PatIndex = pPageContext->Uncacheable ? m_vmmData.UncacheableIndex : m_vmmData.WriteBackIndex;
-        flags.GlobalPage = pPageContext->PagingData->KernelSpace;
-        flags.UserAccess = !pPageContext->PagingData->KernelSpace;
-
-        PteMap(PageTable, physAddr, flags);
-
-        PageInvalidateTlb(VirtualAddress);
-
-        /// TODO: signal other processors to invalidate the mapping
-    }
-    else
-    {
-        // paging structure
-        _VmSetupPagingStructure(pPageContext->PagingData, PageTable);
-    }
-
-    // continue iteration
-    return TRUE;
-}
-
-static
-BOOLEAN
-(__cdecl _VmUnmapPage)(
-    IN      PML4                    Cr3,
-    IN      PVOID                   PageTable,
-    IN      PVOID                   VirtualAddress,
-    IN      BYTE                    PageLevel,
-    IN_OPT  PVOID                   Context
-    )
-{
-    PVMM_MAP_UNMAP_PAGE_WALK_CONTEXT pPageContext;
-
-    UNREFERENCED_PARAMETER(Cr3);
-
-    ASSERT(PageTable != NULL);
-    ASSERT(VirtualAddress != NULL);
-    ASSERT(PAGING_TABLES_FIRST_LEVEL <= PageLevel && PageLevel <= PAGING_TABLES_LAST_LEVEL);
-
-    pPageContext = (PVMM_MAP_UNMAP_PAGE_WALK_CONTEXT) Context;
-    ASSERT(pPageContext != NULL);
-
-    if (!PteIsPresent(PageTable))
-    {
-        return FALSE;
-    }
-
-    if (PageLevel == PAGING_TABLES_LAST_LEVEL)
-    {
-        PHYSICAL_ADDRESS pa = PteGetPhysicalAddress(PageTable);
-
-        PteUnmap(PageTable);
-
-        PageInvalidateTlb(VirtualAddress);
-
-        if (pPageContext->ReleaseMemory)
-        {
-            MmuReleaseMemory(pa, 1);
-        }
-
-        /// TODO: signal other processors to invalidate the mapping
-    }
-
-    // continue iteration
-    return TRUE;
-}
-
-static
-BOOLEAN
-(__cdecl _VmRetrievePhyAccess)(
-    IN      PML4                    Cr3,
-    IN      PVOID                   PageTable,
-    IN      PVOID                   VirtualAddress,
-    IN      BYTE                    PageLevel,
-    IN_OPT  PVOID                   Context
-    )
-{
-    PVMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT pPageContext;
-    BOOLEAN bContinue;
-
-    UNREFERENCED_PARAMETER(Cr3);
-
-    ASSERT(PageTable != NULL);
-    ASSERT(VirtualAddress != NULL);
-    ASSERT(PAGING_TABLES_FIRST_LEVEL <= PageLevel && PageLevel <= PAGING_TABLES_LAST_LEVEL);
-
-    pPageContext = (PVMM_RETRIEVE_PHYS_ACCESS_PAGE_WALK_CONTEXT) Context;
-    ASSERT(pPageContext != NULL);
-
-    bContinue = TRUE;
-
-    if (!PteIsPresent(PageTable))
-    {
-        pPageContext->PhysicalAddress = NULL;
-        return FALSE;
-    }
-
-    if (PageLevel < PAGING_TABLES_LAST_LEVEL - 1)
-    {
-        return TRUE;
-    }
-
-    __try
-    {
-        if (PageLevel == PAGING_TABLES_LAST_LEVEL - 1)
-        {
-            PD_ENTRY_2MB* pPdEntry = (PD_ENTRY_2MB*) PageTable;
-
-            if (pPdEntry->PageSize == 1)
-            {
-                pPageContext->PhysicalAddress = PtrOffset(PteLargePageGetPhysicalAddress(PageTable),
-                                                          AddressOffset(VirtualAddress, PAGE_2MB_OFFSET + 1));
-
-                bContinue = FALSE;
-                __leave;
-            }
-        }
-        else
-        {
-            ASSERT(PageLevel == PAGING_TABLES_LAST_LEVEL);
-
-            pPageContext->PhysicalAddress = PteGetPhysicalAddress(PageTable);
-            bContinue = FALSE;
-            __leave;
-        }
-    }
-    __finally
-    {
-        if (!bContinue)
-        {
-            BOOLEAN bInvalidatePage = FALSE;
-            PT_ENTRY* pPtEntry = (PT_ENTRY*)PageTable;
-
-            pPageContext->Accessed = (BOOLEAN) pPtEntry->Accessed;
-            pPageContext->Dirty = (BOOLEAN) pPtEntry->Dirty;
-
-            if (pPageContext->ClearAccessed)
-            {
-                pPtEntry->Accessed = FALSE;
-                bInvalidatePage = TRUE;
-            }
-
-            if (pPageContext->ClearDirty)
-            {
-                pPtEntry->Dirty = FALSE;
-                bInvalidatePage = TRUE;
-            }
-
-            if (bInvalidatePage)
-            {
-                // 4.10.4.2 Recommended Invalidation
-                // If software modifies a paging - structure entry that maps a page(rather than referencing
-                // another paging structure), it should execute INVLPG for any linear address with a page
-                // number whose translation uses that paging - structure entry.
-
-                // 4.10.4.3 Optional Invalidation
-                // If a paging - structure entry is modified to change the accessed flag from 1 to 0, failure
-                // to perform an invalidation may result in the processor not setting that bit in response to
-                // a subsequent access to a linear address whose translation uses the entry.Software cannot
-                // interpret the bit being clear as an indication that such an access has not occurred.
-
-                // If software modifies a paging - structure entry that identifies the final physical address
-                // for a linear address (either a PTE or a paging - structure entry in which the PS flag is 1)
-                // to change the dirty flag from 1 to 0, failure to perform an invalidation may result in the
-                // processor not setting that bit in response to a subsequent write to a linear address whose
-                // translation uses the entry.Software cannot interpret the bit being clear as an indication
-                // that such a write has not occurred.
-                PageInvalidateTlb(VirtualAddress);
-
-                /// TODO: signal other processors to invalidate the mapping
-            }
-        }
-    }
-
-    return bContinue;
 }

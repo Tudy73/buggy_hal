@@ -1,7 +1,7 @@
 %include "lib.yasm"
 
 extern RestoreRegisters
-
+  
 %macro call_handler 2
 %if %2 == 0
     sub             rsp,        0x8
@@ -43,43 +43,43 @@ align 0x10, db 0
 [bits 64]
 DivideError:
     call_handler    0, 0
-
+    
 ; Interrupt 1 - Debug Exception (#DB)
 align 0x10, db 0
 [bits 64]
 DebugException:
     call_handler    1, 0
-
+    
 ; Interrupt 2 - NMI Interrupt
 align 0x10, db 0
 [bits 64]
 NMIInterrupt:
     call_handler    2, 0
-
+    
 ; Interrupt 3 - Breakpoint Exception (#BP)
 align 0x10, db 0
 [bits 64]
 BreakpointException:
     call_handler    3, 0
-
+    
 ; Interrupt 4 - Overflow Exception (#OF)
 align 0x10, db 0
 [bits 64]
 OverflowException:
     call_handler    4, 0
-
+    
 ; Interrupt 5 - BOUND Range Exceeded Exception (#BR)
 align 0x10, db 0
 [bits 64]
 BoundRangeExceededException:
     call_handler    5, 0
-
+    
 ; Interrupt 6 - Invalid Opcode Exception (#UD)
 align 0x10, db 0
 [bits 64]
 InvalidOpcode:
     call_handler    6, 0
-
+    
 ; Interrupt 7 - Device Not Available Exception (#NM)
 align 0x10, db 0
 [bits 64]
@@ -91,25 +91,25 @@ align 0x10, db 0
 [bits 64]
 DoubleFault:
     call_handler    8, 1
-
+    
 ; Interrupt 9 - Coprocessor Segment Overrun
 align 0x10, db 0
 [bits 64]
 CoprocessorSegmentOverrun:
     call_handler    9, 0
-
+    
 ; Interrupt 10 - Invalid TSS Exception (#TS)
 align 0x10, db 0
 [bits 64]
 InvalidTSS:
     call_handler    10, 1
-
+    
 ; Interrupt 11 - Segment Not Present (#NP)
 align 0x10, db 0
 [bits 64]
 SegmentNotPresent:
     call_handler    11, 1
-
+    
 ; Interrupt 12 - Stack Fault (#SS)
 align 0x10, db 0
 [bits 64]
@@ -127,31 +127,31 @@ align 0x10, db 0
 [bits 64]
 PageFault:
     call_handler    14, 1
-
+    
 ; Interrupt 16 - x87 FPU Floating-Point Error (#MF)
 align 0x10, db 0
 [bits 64]
 FloatingPointX87Error:
     call_handler    16, 0
-
+    
 ; Interrupt 17 - Alignment Check Exception (#AC)
 align 0x10, db 0
 [bits 64]
 AlignmentCheck:
     call_handler    17, 1
-
+    
 ; Interrupt 18 - Machine-Check Exception (#MC)
 align 0x10, db 0
 [bits 64]
 MachineCheck:
     call_handler    18, 0
-
+    
 ; Interrupt 19 - SIMD Floating-Point Exception (#XM)
 align 0x10, db 0
 [bits 64]
 FloatingPointSIMD:
     call_handler    19, 0
-
+    
 ; Interrupt 20 - Virtualization Exception (#VE)
 align 0x10, db 0
 [bits 64]
@@ -170,29 +170,29 @@ PreIsrHandler:
     ; we only read a DWORD because that's what we wrote
     ; because operand size is 32-bit on x64 upper half of
     ; register will be zeroed
-    mov             r8d, [rsp + COMPLETE_PROCESSOR_STATE_size + 8]
+    mov             r8d, [rsp + PROCESSOR_STATE_size + 8]
 
     ; 2nd argument - pointer to interrupt stack
     ; need to add an additional +0x10 because we use 2 bytes
     ; from the stack for the arguments received
-    lea             rdx, [rsp + COMPLETE_PROCESSOR_STATE_size + 0x10]
+    lea             rdx, [rsp + PROCESSOR_STATE_size + 0x10]
 
     ; 1st argument - interrupt index
-    mov             ecx, [rsp + COMPLETE_PROCESSOR_STATE_size]
+    mov             ecx, [rsp + PROCESSOR_STATE_size]
 
     call_func_64    IsrCommonHandler, rcx, rdx, r8, r9
-
+    
     mov             rcx, rsp
     call            RestoreRegisters
 
     ; restore stack
-    add             rsp, COMPLETE_PROCESSOR_STATE_size
+    add             rsp, PROCESSOR_STATE_size
 
     ; we also have the 2 arguments passed to us on the stack
     ; and the error code
     add             rsp, 0x18
-
-    iretq
+    
+    iretq  
 
 %assign     i       0x20
 %rep        224

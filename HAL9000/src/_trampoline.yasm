@@ -20,7 +20,7 @@ TrampolineStart:
 
     jmp     0:TRAMPOLINE_MEMORY_TRAMP_START + ( TrampolineStart.reloadCs - TrampolineStart )
 .reloadCs:
-    ; this is where the jump will take us
+    ; this is where the jump will take us   
     xor     ax, ax
     mov     ds, ax
     mov     es, ax
@@ -63,8 +63,7 @@ TrampolineStart:
     ; we are in 64-bits
     ; the stack will be set up by the C code
     ; so all that we'll do is a return
-    ; after we placed the first (and only) function parameter in rcx
-    mov     rcx,            [rsp + 0x10]
+    mov     rcx,            [rsp+8]
     ret
 
     hlt
@@ -75,12 +74,12 @@ TrampolineStart:
 ; LOW_RM16_PM32_ADDRESS
 ; void __cdecl RM16_to_PM32(TRANSITION_CONFIG* transitionConfig)
 RM16_to_PM32:
-    [bits 16]
+    [bits 16]       
     ;   use PUSHFD
     ;   because flags is only 16 bit while EFLAGS will be 32bit
     pushfd                      ;   save current flags
     cli
-
+    
     mov     ebx,    ecx
 
     mov     eax,    [ebx + TRANSITION_CONFIG.GdtrPhysicalAddress]
@@ -88,7 +87,7 @@ RM16_to_PM32:
     lgdt    [eax]                       ;   set the GDT
 
     mov     eax,    cr0
-    or      al,     (CR0_PE|CR0_NE)     ;   set PE and NE flag
+    or      al,     (CR0_PE|CR0_NE)     ;   set PE and NE flag 
     and     eax,    ~(CR0_CD|CR0_NW)    ;   and clear CD and NW
     mov     cr0,    eax
 
@@ -109,11 +108,11 @@ RM16_to_PM32:
     mov     gs,     ax
 
     popfd                       ;   restore flags
-
+    
     ; save RA
     movzx   edx,    WORD [esp]
     mov     esp,    [ebx + TRANSITION_CONFIG.StackPhysicalAddress]         ; we set new stack
-
+    
     push    edx
 
     ret

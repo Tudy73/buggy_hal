@@ -4,26 +4,20 @@
 #include "syscall_defs.h"
 #include "syscall_func.h"
 #include "syscall_no.h"
-#include "mmu.h"
-#include "process_internal.h"
 #include "dmp_cpu.h"
+
+#define SYSCALL_IF_VERSION_KM                   0x1
 
 extern void SyscallEntry();
 
-#define SYSCALL_IF_VERSION_KM       SYSCALL_IMPLEMENTED_IF_VERSION
-
 void
 SyscallHandler(
-    INOUT   COMPLETE_PROCESSOR_STATE    *CompleteProcessorState
+    INOUT   PPROCESSOR_STATE    UsermodeProcessorState
     )
 {
     SYSCALL_ID sysCallId;
     PQWORD pSyscallParameters;
-    PQWORD pParameters;
     STATUS status;
-    REGISTER_AREA* usermodeProcessorState;
-
-    ASSERT(CompleteProcessorState != NULL);
 
     // It is NOT ok to setup the FMASK so that interrupts will be enabled when the system call occurs
     // The issue is that we'll have a user-mode stack and we wouldn't want to receive an interrupt on
@@ -35,51 +29,25 @@ SyscallHandler(
 
     status = STATUS_SUCCESS;
     pSyscallParameters = NULL;
-    pParameters = NULL;
-    usermodeProcessorState = &CompleteProcessorState->RegisterArea;
 
     __try
     {
         if (LogIsComponentTraced(LogComponentUserMode))
         {
-            DumpProcessorState(CompleteProcessorState);
+            DumpProcessorState(UsermodeProcessorState);
         }
 
-        // Check if indeed the shadow stack is valid (the shadow stack is mandatory)
-        pParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp];
-        status = MmuIsBufferValid(pParameters, SHADOW_STACK_SIZE, PAGE_RIGHTS_READ, GetCurrentProcess());
-        if (!SUCCEEDED(status))
-        {
-            LOG_FUNC_ERROR("MmuIsBufferValid", status);
-            __leave;
-        }
-
-        sysCallId = usermodeProcessorState->RegisterValues[RegisterR8];
-
-        LOG_TRACE_USERMODE("System call ID is %u\n", sysCallId);
+        sysCallId = UsermodeProcessorState->RegisterValues[RegisterR8];
 
         // The first parameter is the system call ID, we don't care about it => +1
-        pSyscallParameters = (PQWORD)usermodeProcessorState->RegisterValues[RegisterRbp] + 1;
-
-        // Dispatch syscalls
-        switch (sysCallId)
-        {
-        case SyscallIdIdentifyVersion:
-            status = SyscallValidateInterface((SYSCALL_IF_VERSION)*pSyscallParameters);
-            break;
-        // STUDENT TODO: implement the rest of the syscalls
-        default:
-            LOG_ERROR("Unimplemented syscall called from User-space!\n");
-            status = STATUS_UNSUPPORTED;
-            break;
-        }
+        pSyscallParameters = (PQWORD)UsermodeProcessorState->RegisterValues[RegisterRbp] + 1;
 
     }
     __finally
     {
         LOG_TRACE_USERMODE("Will set UM RAX to 0x%x\n", status);
 
-        usermodeProcessorState->RegisterValues[RegisterRax] = status;
+        UsermodeProcessorState->RegisterValues[RegisterRax] = status;
 
         CpuIntrSetState(INTR_OFF);
     }
@@ -151,22 +119,3 @@ SyscallCpuInit(
     LOG_TRACE_USERMODE("Successfully set STAR to 0x%X\n", starMsr.Raw);
 }
 
-// SyscallIdIdentifyVersion
-STATUS
-SyscallValidateInterface(
-    IN  SYSCALL_IF_VERSION          InterfaceVersion
-)
-{
-    LOG_TRACE_USERMODE("Will check interface version 0x%x from UM against 0x%x from KM\n",
-        InterfaceVersion, SYSCALL_IF_VERSION_KM);
-
-    if (InterfaceVersion != SYSCALL_IF_VERSION_KM)
-    {
-        LOG_ERROR("Usermode interface 0x%x incompatible with KM!\n", InterfaceVersion);
-        return STATUS_INCOMPATIBLE_INTERFACE;
-    }
-
-    return STATUS_SUCCESS;
-}
-
-// STUDENT TODO: implement the rest of the syscalls

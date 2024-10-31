@@ -68,29 +68,12 @@ MonitorLockTryAcquire(
 {
     BOOLEAN acquired;
 
-    PVOID pCurrentCpu;
-
-    ASSERT(NULL != Lock);
-    ASSERT(NULL != IntrState);
-
     *IntrState = CpuIntrDisable();
-
-    pCurrentCpu = CpuGetCurrent();
 
     acquired = (LOCK_FREE == _InterlockedCompareExchange8(&Lock->Lock.State, LOCK_TAKEN, LOCK_FREE));
     if (!acquired)
     {
         CpuIntrSetState(*IntrState);
-    }
-    else
-    {
-        ASSERT(NULL == Lock->Lock.FunctionWhichTookLock);
-        ASSERT(NULL == Lock->Lock.Holder);
-
-        Lock->Lock.Holder = pCurrentCpu;
-        Lock->Lock.FunctionWhichTookLock = *((PVOID*)_AddressOfReturnAddress());
-
-        ASSERT(LOCK_TAKEN == Lock->Lock.State);
     }
 
     return acquired;

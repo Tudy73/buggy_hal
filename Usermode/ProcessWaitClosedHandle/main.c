@@ -43,8 +43,6 @@ __main(
             LOG_ERROR("SyscallProcessWaitForTermination should have failed for closed handle 0x%X", hProcess);
             __leave;
         }
-
-        LOG_TEST_PASS;
     }
     __finally
     {

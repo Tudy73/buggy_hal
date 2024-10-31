@@ -373,7 +373,7 @@ IoApicSystemGetVectorForIrq(
     {
         if (0 == BitmapGetBitValue(&pIoApic->InterruptsWritten, offsetInIoApic))
         {
-            LOG_WARNING("Interrupt 0x%x is not registered in IO Apic 0x%x\n", offsetInIoApic, pIoApic->ApicId);
+            LOG_ERROR("Interrupt 0x%x is not registered in IO Apic 0x%x\n", offsetInIoApic, pIoApic->ApicId);
             status = STATUS_DEVICE_INTERRUPT_NOT_CONFIGURED;
             __leave;
         }

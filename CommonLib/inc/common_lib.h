@@ -1,27 +1,12 @@
 #pragma once
 
-#ifdef __cplusplus
-#define C_HEADER_START      extern "C" {
-#else
-#define C_HEADER_START
-#endif
-
-#ifdef __cplusplus
-#define C_HEADER_END        }
-#else
-#define C_HEADER_END
-#endif
-
-
-C_HEADER_START
-
 // basic includes
 #include "base.h"
 #include "sal_interface.h"
 #include "status.h"
 #include "va_list.h"
 #include "intutils.h"
-#include "native/memory.h"
+#include "memory.h"
 #include "assert.h"
 
 #pragma pack(push,16)
@@ -49,5 +34,3 @@ STATUS
 CommonLibInit(
     IN      PCOMMON_LIB_INIT        InitSettings
     );
-
-C_HEADER_END
