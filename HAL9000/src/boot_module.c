@@ -99,7 +99,7 @@ BootModulesInit(
             LOG_FUNC_ERROR_ALLOC("MmuMapSystemMemory",NumberOfModules * sizeof(MULTIBOOT_MODULE_INFORMATION));
             __leave;
         }
-
+        LOG("The number of modules are: %d\n", NumberOfModules);
         for (DWORD i = 0; i < NumberOfModules; ++i)
         {
             status = _MapSingleModule(&pModuleInformation[i], &pMultibootModules[i]);
@@ -242,8 +242,8 @@ _MapSingleModule(
             memcpy(bootMod.Name, pMappedString, modNameLen - 1);
             bootMod.Name[modNameLen - 1] = '\0';
         }
-
-        bootMod.Length = MultibootModule->ModuleEndPhysAddr - MultibootModule->ModuleStartPhysAddr;
+        LOG("What I need is here: %d, %d, %d\n\n", MultibootModule->ModuleEndPhysAddr, MultibootModule->ModuleStartPhysAddr, MultibootModule->StringPhysAddr);
+        bootMod.Length = (QWORD)MultibootModule->ModuleEndPhysAddr - MultibootModule->ModuleStartPhysAddr;
 
         if (bootMod.Length == 0)
         {

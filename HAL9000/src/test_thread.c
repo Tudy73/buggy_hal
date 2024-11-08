@@ -324,8 +324,8 @@ void
     UNREFERENCED_PARAMETER(NumberOfThreads);
 
     pNewContext = ExAllocatePoolWithTag(PoolAllocatePanicIfFail, sizeof(PVOID), HEAP_TEST_TAG, 0);
-
+#pragma warning(disable:4090)
     memcpy(pNewContext, &PrepareContext, sizeof(PVOID));
-
+#pragma warning(default:4090)
     *Context = pNewContext;
 }

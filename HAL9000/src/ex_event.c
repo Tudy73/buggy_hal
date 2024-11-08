@@ -84,7 +84,7 @@ ExEventWaitForSignal(
     INTR_STATE dummyState;
     INTR_STATE oldState;
     BYTE newState;
-
+    
     ASSERT(NULL != Event);
 
     pCurrentThread = GetCurrentThread();
@@ -97,6 +97,7 @@ ExEventWaitForSignal(
     while (TRUE != _InterlockedCompareExchange8(&Event->Signaled, newState, TRUE))
     {
         LockAcquire(&Event->EventLock, &dummyState);
+
         InsertTailList(&Event->WaitingList, &pCurrentThread->ReadyList);
         ThreadTakeBlockLock();
         LockRelease(&Event->EventLock, dummyState);

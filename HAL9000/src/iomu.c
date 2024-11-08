@@ -484,6 +484,8 @@ IomuInitSystemDriver(
 
     ASSERT(1 == pDriver->NoOfDevices);
 
+    //__halt();
+    ///HERE IT HALTED So I commented it
     pNextDevice = pDriver->DeviceList.Flink;
     ASSERT(pNextDevice != &pDriver->DeviceList);
 

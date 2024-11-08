@@ -20,6 +20,7 @@ LockSystemInit(
 {
 
 // warning C4028: formal parameter 1 different from declaration
+#pragma warning(disable:4113)
 #pragma warning(disable:4028)
     if (MonitorSupport)
     {
@@ -40,6 +41,7 @@ LockSystemInit(
         LockRelease = SpinlockRelease;
     }
 #pragma warning(default:4028)
+#pragma warning(default:4113)
 }
 
 #endif // _COMMONLIB_NO_LOCKS_

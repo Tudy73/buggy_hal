@@ -45,18 +45,23 @@ SystemPreinit(
 
     BootModulesPreinit();
     DumpPreinit();
+    ///HALT HERE
     ThreadSystemPreinit();
     printSystemPreinit(NULL);
     LogSystemPreinit();
+    ///HALT HERE
     OsInfoPreinit();
-    MmuPreinitSystem();
+    MmuPreinitSystem();///HERE IS THE PROBLEM
     IomuPreinitSystem();
     AcpiInterfacePreinit();
     SmpPreinit();
+    ///HALT HERE
     PciSystemPreinit();
+    ///HALT HERE
     CorePreinit();
     NetworkStackPreinit();
     ProcessSystemPreinit();
+    ///NO PROBLEM UNTIL HERE ANYMORE
 }
 
 SAL_SUCCESS
@@ -156,7 +161,7 @@ SystemInit(
         return status;
     }
     LOGL("IomuInitSystemDriver suceeded\n");
-
+    
     // initialize ACPI interface
     status = AcpiInterfaceInit();
     if (!SUCCEEDED(status))
@@ -199,10 +204,10 @@ SystemInit(
         return status;
     }
     LOGL("CpuMuAllocAndInitCpu succeeded\n");
-
-    // warning C4055: 'type cast': from data pointer to function pointer
-#pragma warning(suppress:4055)
-    ((PFUNC_AssertFunction)&status)("C is very cool!\n");
+//
+//	// warning C4055: 'type cast': from data pointer to function pointer
+//#pragma warning(suppress:4055)
+//	((PFUNC_AssertFunction)&status)("C is very cool!\n");
 
     // initialize IO system
     // this also initializes the IDT

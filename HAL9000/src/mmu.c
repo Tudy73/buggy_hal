@@ -250,11 +250,13 @@ MmuPreinitSystem(
     memzero(&m_mmuData, sizeof(MMU_DATA));
 
     RecRwSpinlockInit(0, &m_mmuData.PagingData.Lock);
-
+    ///HALT HERE
     InitializeListHead(&m_mmuData.ZeroThreadData.PagesToZeroList);
+    ///HALT HERE
     LockInit(&m_mmuData.ZeroThreadData.PagesLock);
-    DWORD z = *((PBYTE)NULL);z;
-
+    ///HALT HERE -> problem is here
+    //DWORD z = *((PBYTE)NULL); Why would we use the z if the next functions are taking void as parameters
+    ///HALT HERE
     PmmPreinitSystem();
     VmmPreinit();
 }

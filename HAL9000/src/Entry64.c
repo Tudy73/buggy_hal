@@ -33,12 +33,12 @@ Entry64(
 
     initSettings.Size = sizeof(COMMON_LIB_INIT);
     initSettings.AssertFunction = Hal9000Assert;
-
+    ///HALT HERE
     CpuMuPreinit();
 
     status = CpuMuSetMonitorFilterSize(sizeof(MONITOR_LOCK));
     initSettings.MonitorSupport = SUCCEEDED(status);
-
+    ///HALT HERE
     status = CommonLibInit(&initSettings);
     if (!SUCCEEDED(status))
     {
@@ -50,11 +50,12 @@ Entry64(
     ASSERT_INFO(NULL != argv, "We are expecting a non-NULL pointer\n");
 
     gVirtualToPhysicalOffset = argv->VirtualToPhysicalOffset;
-    SystemPreinit();
-
+    ///HALT HERE
+    SystemPreinit();///PROBLEM HERE
+    ///HALT HERE
     DumpParameters(argv);
-
-    status = SystemInit(argv);
+    ///HALT HERE
+    status = SystemInit(argv);///PROBLEMS HERE  
     ASSERT(SUCCEEDED(status));
 
     LOGL("InitSystem executed successfully\n");
