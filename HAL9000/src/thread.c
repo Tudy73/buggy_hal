@@ -485,15 +485,15 @@ ThreadYield(
 void
 ThreadBlock(
     void
-    )
+)
 {
     PTHREAD pCurrentThread;
-    INTR_STATE oldState;
 
     pCurrentThread = GetCurrentThread();
+    
 
-    ASSERT( INTR_OFF == CpuIntrGetState());
-    ASSERT(LockIsOwner(&pCurrentThread->BlockLock));    
+    ASSERT(INTR_OFF == CpuIntrGetState());
+    ASSERT(LockIsOwner(&pCurrentThread->BlockLock));
 
     if (THREAD_FLAG_FORCE_TERMINATE_PENDING == _InterlockedAnd(&pCurrentThread->Flags, MAX_DWORD))
     {
@@ -503,7 +503,7 @@ ThreadBlock(
 
     pCurrentThread->TickCountEarly++;
     pCurrentThread->State = ThreadStateBlocked;
-    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &oldState);
+
     _ThreadSchedule();
 }
 
@@ -954,20 +954,17 @@ static
 void
 _ThreadSchedule(
     void
-    )
+)
 {
     PTHREAD pCurrentThread;
     PTHREAD pNextThread;
-    //INTR_STATE dummyState;
+    INTR_STATE dummyState;
     PCPU* pCpu;
 
     ASSERT(INTR_OFF == CpuIntrGetState());
-    ASSERT(LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
 
     pCurrentThread = GetCurrentThread();
-    ASSERT( NULL != pCurrentThread );
-
-    pNextThread = NULL;
+    ASSERT(NULL != pCurrentThread);
 
     pCpu = GetCurrentPcpu();
 
@@ -977,10 +974,11 @@ _ThreadSchedule(
     // or not
     pCpu->ThreadData.PreviousThread = pCurrentThread;
 
-    //LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
+    LockAcquire(&m_threadSystemData.ReadyThreadsLock, &dummyState);
+
     // get next thread
     pNextThread = _ThreadGetReadyThread();
-    ASSERT( NULL != pNextThread );
+    ASSERT(NULL != pNextThread);
 
     // If the currently running thread is still ready to run (i.e. this function was not called to due an
     // exit or block) check to see if the next scheduled thread is the idle thread or not, if it is so
@@ -1022,9 +1020,7 @@ _ThreadSchedule(
         // thread to be the next one it will be fine - there is no possibility of interrupts
         // appearing to cause inconsistencies
         SetCurrentThread(pNextThread);
-        ThreadSwitch( &pCurrentThread->Stack, pNextThread->Stack);
-
-        LOGPL("4\n");
+        ThreadSwitch(&pCurrentThread->Stack, pNextThread->Stack);
         ASSERT(INTR_OFF == CpuIntrGetState());
         ASSERT(LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
 
@@ -1042,6 +1038,7 @@ _ThreadSchedule(
         }
     }
 
+    LOGL("ii ok pana aici!!!\n");
     ThreadCleanupPostSchedule();
 }
 
