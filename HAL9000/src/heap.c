@@ -3,6 +3,7 @@
 #include "vmm.h"
 #include "dmp_memory.h"
 #include "cpu.h"
+#include "thread.h"
 
 // 64KB is the minimum heap size required to initialize the system
 #define HEAP_MINIMUM_SIZE               (64*KB_SIZE)
@@ -518,13 +519,14 @@ _ValidateHeapEntry(
 
     if (HEAP_MAGIC != pHeapTail->Magic)
     {
+        LOG("[th:%s]\n", ThreadGetName(NULL));
         LOG_ERROR("[HEAD] Found [0x%x] instead of magic [0x%x]\n", pHeapTail->Magic, HEAP_MAGIC);
         bResult = FALSE;
     }
 
     if (0 == HeapEntry->Tag)
     {
-        LOG_ERROR("Found tag zero\n");
+        LOG_ERROR("Tag should be [0x%x], but is [0x%x]\n", Tag, HeapEntry->Tag);
         bResult = FALSE;
     }
 
@@ -538,6 +540,5 @@ _ValidateHeapEntry(
     {
         DumpMemory((PVOID)PtrDiff(HeapEntry, 0x100), (QWORD) PtrDiff(HeapEntry, 0x100), totalSize + 0x100, TRUE, TRUE );
     }
-
     return bResult;
 }

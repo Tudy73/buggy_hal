@@ -74,7 +74,6 @@ ExEventClearSignal(
 
     _InterlockedExchange8(&Event->Signaled, FALSE);
 }
-
 void
 ExEventWaitForSignal(
     INOUT   EX_EVENT*      Event

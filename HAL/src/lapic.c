@@ -154,12 +154,13 @@ LapicSendIpi(
 
     if ((ApicDestinationShorthandSelf == DestinationShorthand) || (ApicDestinationShorthandAll == DestinationShorthand))
     {
+
         // in this case only FIXED IPI can be sent
         ASSERT(ApicDeliveryModeFixed == DeliveryMode);
     }
 
     highIcrValue.Destination = ApicId;
-
+    
     if (NULL != Vector)
     {
         lowIcrValue.Vector = *Vector;
@@ -174,7 +175,13 @@ LapicSendIpi(
     lowIcrValue.DestinationShorthand = DestinationShorthand;
 
     pLapic->IcrHigh.Value = highIcrValue.Raw;
-    pLapic->IcrLow.Value = lowIcrValue.Raw;
+    //here   
+    pLapic->IcrLow.Value = lowIcrValue.Raw;      
+    if (Vector != NULL) {
+        long long i = 0;
+        while (i == 0) {
+        }
+    }
 }
 
 BYTE

@@ -192,7 +192,6 @@ IoApicLateSystemInit(
     STATUS status;
 
     LOG_FUNC_START;
-
     status = _IoApicSystemRetrievePrtEntries();
     if (!SUCCEEDED(status))
     {
@@ -725,11 +724,11 @@ _IoApicSystemRetrievePrtEntries(
         {
             ASSERT(noOfPrtEntries == m_ioApicData.NoOfInterruptOverrides);
         }
+
     }
 
     m_ioApicData.NoOfPrtEntries = noOfPrtEntries;
     m_ioApicData.PrtEntries = pPrtEntires;
-
     return status;
 }
 

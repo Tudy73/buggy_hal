@@ -253,7 +253,6 @@ SystemInit(
         LOG_FUNC_ERROR("ThreadSystemInitIdleForCurrentCPU", status);
         return status;
     }
-
     LOGL("ThreadSystemInitIdleForCurrentCPU succeeded\n");
 
     status = AcpiInterfaceLateInit();
@@ -285,7 +284,6 @@ SystemInit(
     MmuDiscardIdentityMappings();
 
     LOGL("MmuDiscardIdentityMappings completed\n");
-
     status = MmuInitThreadingSystem();
     if (!SUCCEEDED(status))
     {

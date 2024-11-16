@@ -267,14 +267,14 @@ ApInitCpu(
     }
 
     MmuActivateProcessIds();
-
     status = ThreadSystemInitIdleForCurrentCPU();
+
     if (!SUCCEEDED(status))
     {
         LOG_FUNC_ERROR("ThreadSystemInitIdleForCurrentCPU", status);
         NOT_REACHED;
-    }
-
+    }    
+    ///after here
     // exit main thread
     ThreadExit(STATUS_SUCCESS);
     NOT_REACHED;

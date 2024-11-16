@@ -253,12 +253,10 @@ ThreadSystemInitIdleForCurrentCPU(
     // wait for idle thread
     LOG_TRACE_THREAD("Waiting for idle thread signal\n");
     ExEventWaitForSignal(&idleStarted);
-    LOGPL("ok until now\n");
     LOG_TRACE_THREAD("Received idle thread signal\n");
 
     LOG_FUNC_END_THREAD;
 
-    LOGPL("ok until now\n");
     return status;
 }
 
@@ -557,7 +555,6 @@ ThreadExit(
     ExEventSignal(&pThread->TerminationEvt);
 
     ProcessNotifyThreadTermination(pThread);
-
     _ThreadSchedule();
     NOT_REACHED;
 }
@@ -980,6 +977,8 @@ _ThreadSchedule(
     pNextThread = _ThreadGetReadyThread();
     ASSERT(NULL != pNextThread);
 
+    LOGTPL("INAINTE DE IF-URI\n");
+
     // If the currently running thread is still ready to run (i.e. this function was not called to due an
     // exit or block) check to see if the next scheduled thread is the idle thread or not, if it is so
     // this thread will continue execution after the function returns.
@@ -1038,7 +1037,6 @@ _ThreadSchedule(
         }
     }
 
-    LOGL("ii ok pana aici!!!\n");
     ThreadCleanupPostSchedule();
 }
 

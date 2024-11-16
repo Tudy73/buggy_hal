@@ -338,7 +338,6 @@ SmpWakeupAps(
         LOGL("Will signal APs\n");
         _SmpSignalAllAPs(m_smpData.SipiVector);
         LOGL("APs were signaled\n");
-
         ExEventWaitForSignal(&m_smpData.ApStartupEvent);
 
         LOGL("Aps have waken UP\n");
@@ -620,14 +619,15 @@ _SmpSignalAllAPs(
     IN      BYTE            SipiVector
     )
 {
-    LapicSystemSendIpi(0, ApicDeliveryModeINIT, ApicDestinationShorthandAllExcludingSelf, ApicDestinationModePhysical, NULL);
+    LapicSystemSendIpi(0, ApicDeliveryModeINIT, ApicDestinationShorthandAllExcludingSelf, ApicDestinationModePhysical, NULL);    
     PitSleep(INIT_SLEEP);
 
     LapicSystemSendIpi(0, ApicDeliveryModeSIPI, ApicDestinationShorthandAllExcludingSelf, ApicDestinationModePhysical, &SipiVector);
-    PitSleep(SIPI_SLEEP);
+    PitSleep(SIPI_SLEEP); 
 
     LapicSystemSendIpi(0, ApicDeliveryModeSIPI, ApicDestinationShorthandAllExcludingSelf, ApicDestinationModePhysical, &SipiVector);
     PitSleep(SIPI_SLEEP);
+
 }
 
 static
