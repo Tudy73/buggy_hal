@@ -740,7 +740,7 @@ _ThreadInit(
             status = STATUS_HEAP_INSUFFICIENT_RESOURCES;
             __leave;
         }
-        memzero(pThread, sizeof(THREAD) * 2);
+        memzero(pThread, sizeof(THREAD));
 
         RfcPreInit(&pThread->RefCnt);
 
@@ -977,13 +977,12 @@ _ThreadSchedule(
     pNextThread = _ThreadGetReadyThread();
     ASSERT(NULL != pNextThread);
 
-    LOGTPL("INAINTE DE IF-URI\n");
-
     // If the currently running thread is still ready to run (i.e. this function was not called to due an
     // exit or block) check to see if the next scheduled thread is the idle thread or not, if it is so
     // this thread will continue execution after the function returns.
     if (pCurrentThread->State == ThreadStateReady)
     {
+
         if (pNextThread == pCpu->ThreadData.IdleThread)
         {
             // If the next thread on the ready list is the idle one re-schedule the
@@ -1019,6 +1018,7 @@ _ThreadSchedule(
         // thread to be the next one it will be fine - there is no possibility of interrupts
         // appearing to cause inconsistencies
         SetCurrentThread(pNextThread);
+
         ThreadSwitch(&pCurrentThread->Stack, pNextThread->Stack);
         ASSERT(INTR_OFF == CpuIntrGetState());
         ASSERT(LockIsOwner(&m_threadSystemData.ReadyThreadsLock));
@@ -1038,6 +1038,7 @@ _ThreadSchedule(
     }
 
     ThreadCleanupPostSchedule();
+
 }
 
 REQUIRES_EXCL_LOCK(m_threadSystemData.ReadyThreadsLock)
@@ -1080,7 +1081,6 @@ ThreadCleanupPostSchedule(
         else if (prevThread->State == ThreadStateDying)
         {
             LOG_TRACE_THREAD("Will dereference thread: [%s]\n", prevThread->Name);
-
             // dereference thread
             _ThreadDereference(prevThread);
             GetCurrentPcpu()->ThreadData.PreviousThread = NULL;
@@ -1188,7 +1188,7 @@ _ThreadDereference(
     )
 {
     ASSERT( NULL != Thread );
-
+    //problem found here
     RfcDereference(&Thread->RefCnt);
 }
 
@@ -1199,7 +1199,7 @@ _ThreadDestroy(
     IN_OPT  PVOID                   Context
     )
 {
-    PTHREAD Thread = (PTHREAD) Object;
+    PTHREAD Thread = (PTHREAD)CONTAINING_RECORD(Object, THREAD, RefCnt);
 
     ASSERT(NULL != Thread);
     ASSERT(NULL == Context);
@@ -1225,7 +1225,7 @@ _ThreadDestroy(
     if (NULL != Thread->Stack)
     {
         // This is the kernel mode stack
-        // It does not 'belong' to any process => pass NULL
+        // It does not 'belong' to any process => pass NULL]
         MmuFreeStack(Thread->Stack, NULL);
         Thread->Stack = NULL;
     }

@@ -176,12 +176,8 @@ LapicSendIpi(
 
     pLapic->IcrHigh.Value = highIcrValue.Raw;
     //here   
-    pLapic->IcrLow.Value = lowIcrValue.Raw;      
-    if (Vector != NULL) {
-        long long i = 0;
-        while (i == 0) {
-        }
-    }
+    pLapic->IcrLow.Value = lowIcrValue.Raw; 
+
 }
 
 BYTE

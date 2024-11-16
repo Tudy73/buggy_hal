@@ -519,7 +519,8 @@ _ValidateHeapEntry(
 
     if (HEAP_MAGIC != pHeapTail->Magic)
     {
-        LOG("[th:%s]\n", ThreadGetName(NULL));
+        LOGTPL("The memory address: %d", pHeapTail);
+        LOG("[TH:%s]\n", ThreadGetName(NULL));
         LOG_ERROR("[HEAD] Found [0x%x] instead of magic [0x%x]\n", pHeapTail->Magic, HEAP_MAGIC);
         bResult = FALSE;
     }

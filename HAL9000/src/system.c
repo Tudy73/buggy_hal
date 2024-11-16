@@ -81,6 +81,7 @@ SystemInit(
                   TRUE
                   );
 
+    LogSetState(FALSE);
     // if validation fails => the system will HALT
     CpuMuValidateConfiguration();
 
@@ -161,7 +162,7 @@ SystemInit(
         return status;
     }
     LOGL("IomuInitSystemDriver suceeded\n");
-    
+
     // initialize ACPI interface
     status = AcpiInterfaceInit();
     if (!SUCCEEDED(status))
@@ -303,6 +304,7 @@ SystemInit(
 
     LOGL("IOMU late initialization successfully completed\n");
 
+    LogSetState(TRUE);
     status = NetworkStackInit(FALSE);
     if (!SUCCEEDED(status))
     {
