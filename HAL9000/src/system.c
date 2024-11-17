@@ -81,7 +81,6 @@ SystemInit(
                   TRUE
                   );
 
-    LogSetState(FALSE);
     // if validation fails => the system will HALT
     CpuMuValidateConfiguration();
 
@@ -304,7 +303,6 @@ SystemInit(
 
     LOGL("IOMU late initialization successfully completed\n");
 
-    LogSetState(TRUE);
     status = NetworkStackInit(FALSE);
     if (!SUCCEEDED(status))
     {
